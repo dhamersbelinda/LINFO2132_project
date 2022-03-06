@@ -87,12 +87,16 @@ public class SighGrammar extends Grammar
         .word();
 
     public rule identifier =
-        identifier(seq(choice(alpha, '_'), id_part.at_least(0)))
+        identifier(seq(alpha, id_part.at_least(0)))
         .push($ -> $.str());
+
+    public rule atom_identifier =
+        identifier(seq('_', id_part.at_least(0)))
+            .push($ -> new AtomLiteralNode($.span(), $.str()));
     
     // ==== SYNTACTIC =========================================================
     
-    public rule reference =
+    public rule reference = //should atom references be added here
         identifier
         .push($ -> new ReferenceNode($.span(), $.$[0]));
 
@@ -189,13 +193,17 @@ public class SighGrammar extends Grammar
         .infix(EQUALS,
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
-    public rule expression =
+    public rule logic_expression =
+        seq(atom_identifier, DOT)
+            .push($ -> new LogicNode($.span(), $.$[0]));
+
+    public rule expression = //faut rien changer ici non?
         seq(assignment_expression);
 
     public rule expression_stmt =
         expression
         .filter($ -> {
-            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode))
+            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof LogicNode))
                 return false;
             $.push(new ExpressionStatementNode($.span(), $.$[0]));
             return true;
