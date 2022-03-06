@@ -112,6 +112,7 @@ public final class SemanticAnalysis
         walker.register(IntLiteralNode.class,           PRE_VISIT,  analysis::intLiteral);
         walker.register(FloatLiteralNode.class,         PRE_VISIT,  analysis::floatLiteral);
         walker.register(StringLiteralNode.class,        PRE_VISIT,  analysis::stringLiteral);
+        walker.register(AtomLiteralNode.class,          PRE_VISIT,  analysis::atomLiteral);
         walker.register(ReferenceNode.class,            PRE_VISIT,  analysis::reference);
         walker.register(ConstructorNode.class,          PRE_VISIT,  analysis::constructor);
         walker.register(ArrayLiteralNode.class,         PRE_VISIT,  analysis::arrayLiteral);
@@ -122,6 +123,7 @@ public final class SemanticAnalysis
         walker.register(UnaryExpressionNode.class,      PRE_VISIT,  analysis::unaryExpression);
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
+        walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -170,6 +172,10 @@ public final class SemanticAnalysis
 
     private void stringLiteral (StringLiteralNode node) {
         R.set(node, "type", StringType.INSTANCE);
+    }
+
+    private void atomLiteral (AtomLiteralNode node) {
+        R.set(node, "type", AtomType.INSTANCE);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -584,6 +590,20 @@ public final class SemanticAnalysis
             else
                 r.errorFor("Trying to assign to an non-lvalue expression.", node.left);
         });
+    }
+    private void logicExpr (LogicNode node)
+    {
+        R.rule(node, "type")
+            .using(node.aNode.attr("type"))
+            .by(r -> {
+                Type aNode  = r.get(0);
+                r.set(0, r.get(0));
+
+                /*if (!(node.aNode instanceof AtomLiteralNode)) {
+                        r.errorFor("Trying to use a non-atom type value in logic expression.", node);
+                }*/
+                //check ici semble un peu inutile
+            });
     }
 
     // endregion
