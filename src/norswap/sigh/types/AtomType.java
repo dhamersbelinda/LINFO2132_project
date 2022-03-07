@@ -5,7 +5,10 @@ public final class AtomType extends Type
     public static final AtomType INSTANCE = new AtomType();
     private AtomType() {}
 
-    //TODO: primitive or not?
+    @Override public boolean isPrimitive () {
+        return true;
+    }
+
     @Override public String name() {
         return "Atom";
     }

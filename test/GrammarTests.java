@@ -1,6 +1,7 @@
 import norswap.autumn.AutumnTestFixture;
 import norswap.sigh.SighGrammar;
 import norswap.sigh.ast.*;
+import norswap.sigh.types.AtomType;
 import org.testng.annotations.Test;
 
 import static java.util.Arrays.asList;
@@ -22,6 +23,10 @@ public class GrammarTests extends AutumnTestFixture {
         return new FloatLiteralNode(null, d);
     }
 
+    private static AtomLiteralNode atomlit (String a) {
+        return new AtomLiteralNode(null, a);
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     @Test
@@ -37,6 +42,17 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect("false", new ReferenceNode(null, "false"));
         successExpect("null", new ReferenceNode(null, "null"));
         successExpect("!false", new UnaryExpressionNode(null, UnaryOperator.NOT, new ReferenceNode(null, "false")));
+    }
+
+    @Test
+    public void testLiteralAtom () {
+        rule = grammar.expression;
+
+        //successExpect("_atom", atomlit("_atom"));
+        successExpect("._atom2", new LogicNode(null, atomlit("_atom2")));
+        successExpect(".dog(_poodle, _labrador)",
+            new LogicNode(null,
+                new PredicateNode(null, new FunctorNode(null, "dog"), asList(atomlit("_poodle"), atomlit("_labrador")))));
     }
 
     // ---------------------------------------------------------------------------------------------

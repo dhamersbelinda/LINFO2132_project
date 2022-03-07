@@ -124,6 +124,8 @@ public final class SemanticAnalysis
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
         walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
+        walker.register(FunctorNode.class,              PRE_VISIT,  analysis::functor);
+        walker.register(PredicateNode.class,              PRE_VISIT,  analysis::predicate);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -605,6 +607,53 @@ public final class SemanticAnalysis
                 //check ici semble un peu inutile
             });
     }
+
+    private void predicate(PredicateNode node) {
+
+            this.inferenceContext = node;
+
+            Attribute[] dependencies = new Attribute[node.arguments.size() + 1];
+            dependencies[0] = node.functor.attr("type");
+            forEachIndexed(node.arguments, (i, arg) -> {
+                dependencies[i + 1] = arg.attr("type");
+                R.set(arg, "index", i);
+            });
+
+            R.rule(node, "type")
+                .using(dependencies)
+                .by(r -> {
+                    Type maybeFunctorType = r.get(0); //functor
+
+                    if (!(maybeFunctorType instanceof FunctorType)) {
+                        r.error("trying to call a non-function expression: " + node.functor, node.functor);
+                        return;
+                    }
+
+                    FunType functorType = cast(maybeFunctorType);
+                    r.set(0, functorType.returnType); //boolean
+
+                    //Type[] params = funType.paramTypes; //pas besoin car atomes
+                    List<ExpressionNode> args = node.arguments;
+
+                    /*if (params.length != args.size())
+                        r.errorFor(format("wrong number of arguments, expected %d but got %d",
+                            params.length, args.size()),
+                            node);
+*/
+                    int checkedArgs = Math.min(params.length, args.size());
+
+                    for (int i = 0; i < checkedArgs; ++i) {
+                        Type argType = r.get(i + 1);
+                        Type paramType = funType.paramTypes[i];
+                        if (!isAssignableTo(argType, paramType))
+                            r.errorFor(format(
+                                "incompatible argument provided for argument %d: expected %s but got %s",
+                                i, paramType, argType),
+                                node.arguments.get(i));
+                    }
+                });
+        }
+
 
     // endregion
     // =============================================================================================

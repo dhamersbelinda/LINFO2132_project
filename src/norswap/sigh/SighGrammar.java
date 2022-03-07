@@ -91,7 +91,7 @@ public class SighGrammar extends Grammar
         .push($ -> $.str());
 
     public rule atom_identifier =
-        identifier(seq('_', id_part.at_least(0)))
+        identifier(seq('_', alpha, id_part.at_least(0)))
             .push($ -> new AtomLiteralNode($.span(), $.str()));
     
     // ==== SYNTACTIC =========================================================
@@ -100,6 +100,10 @@ public class SighGrammar extends Grammar
         identifier
         .push($ -> new ReferenceNode($.span(), $.$[0]));
 
+    public rule functor =
+        identifier
+        .push($ -> new FunctorNode($.span(), $.$[0]));
+
     public rule constructor =
         seq(DOLLAR, reference)
         .push($ -> new ConstructorNode($.span(), $.$[0]));
@@ -107,6 +111,14 @@ public class SighGrammar extends Grammar
     public rule simple_type =
         identifier
         .push($ -> new SimpleTypeNode($.span(), $.$[0]));
+
+    public rule atoms = lazy(() ->
+        this.atom_identifier.sep(0, COMMA)
+            .as_list(AtomLiteralNode.class));
+
+    public rule predicate =
+        seq(functor, LPAREN, atoms, RPAREN)
+        .push($ -> new PredicateNode($.span(), $.$[0], $.$[1]));
 
     public rule paren_expression = lazy(() ->
         seq(LPAREN, this.expression, RPAREN)
@@ -194,11 +206,11 @@ public class SighGrammar extends Grammar
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
     public rule logic_expression =
-        seq(atom_identifier, DOT)
+        seq(DOT, choice(predicate, atom_identifier))
             .push($ -> new LogicNode($.span(), $.$[0]));
 
     public rule expression = //faut rien changer ici non?
-        seq(assignment_expression);
+        choice(logic_expression, assignment_expression);
 
     public rule expression_stmt =
         expression

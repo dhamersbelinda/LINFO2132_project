@@ -1,15 +1,15 @@
 package norswap.sigh.ast;
 
 import norswap.autumn.positions.Span;
+import norswap.utils.Util;
 
 public final class AtomLiteralNode extends ExpressionNode {
-    public final String value;
-    public AtomLiteralNode (Span span, String value) {
+    public final String name;
+
+    public AtomLiteralNode (Span span, Object name) {
         super(span);
-        this.value = value;
+        this.name = Util.cast(name, String.class);
     }
 
-    @Override public String contents() {
-        return String.valueOf(value);
-    }
+    @Override public String contents() { return name; }
 }
