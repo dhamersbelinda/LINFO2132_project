@@ -155,6 +155,7 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
 
     @Test public void testVarDecl() {
         successInput("var x: Int = 1; return x");
+        successInput("._akjfdglkjdlfkg");
         successInput("var x: Float = 2.0; return x");
 
         successInput("var x: Int = 0; return x = 3");

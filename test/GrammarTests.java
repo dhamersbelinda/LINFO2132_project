@@ -34,6 +34,8 @@ public class GrammarTests extends AutumnTestFixture {
         rule = grammar.expression;
 
         successExpect("42", intlit(42));
+        //successExpect("_asd.", new AtomLiteralNode(null, "_asd"));
+        successExpect("._a", new LogicNode(null, new AtomLiteralNode(null, "_a")));
         successExpect("42.0", floatlit(42d));
         successExpect("\"hello\"", new StringLiteralNode(null, "hello"));
         successExpect("(42)", new ParenthesizedNode(null, intlit(42)));
@@ -52,7 +54,8 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect("._atom2", new LogicNode(null, atomlit("_atom2")));
         successExpect(".dog(_poodle, _labrador)",
             new LogicNode(null,
-                new PredicateNode(null, new FunctorNode(null, "dog"), asList(atomlit("_poodle"), atomlit("_labrador")))));
+                new PredicateNode(null,
+                        new FunctorNode(null, "dog"), asList(atomlit("_poodle"), atomlit("_labrador")))));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -131,6 +134,7 @@ public class GrammarTests extends AutumnTestFixture {
         rule = grammar.statement;
 
         successExpect("return", new ReturnNode(null, null));
+        //successExpect("_a.", new ExpressionStatementNode(null, new AtomLiteralNode(null, "_a")));
         successExpect("return 1", new ReturnNode(null, intlit(1)));
         successExpect("print(1)", new ExpressionStatementNode(null,
             new FunCallNode(null, new ReferenceNode(null, "print"), asList(intlit(1)))));

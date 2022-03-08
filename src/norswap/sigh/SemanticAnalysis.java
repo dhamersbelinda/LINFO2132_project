@@ -125,7 +125,7 @@ public final class SemanticAnalysis
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
         walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
         walker.register(FunctorNode.class,              PRE_VISIT,  analysis::functor);
-        walker.register(PredicateNode.class,              PRE_VISIT,  analysis::predicate);
+        walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -596,63 +596,61 @@ public final class SemanticAnalysis
     private void logicExpr (LogicNode node)
     {
         R.rule(node, "type")
-            .using(node.aNode.attr("type"))
+            .using(node.aNode.attr("type")) //will this give expressionNode or more specific
             .by(r -> {
                 Type aNode  = r.get(0);
                 r.set(0, r.get(0));
-
-                /*if (!(node.aNode instanceof AtomLiteralNode)) {
-                        r.errorFor("Trying to use a non-atom type value in logic expression.", node);
-                }*/
-                //check ici semble un peu inutile
             });
     }
 
+    private void functor(FunctorNode node) { //TODO : besoin de contexte?
+        //TODO: what checks could we do here? puisque c'est juste un identifier
+
+        R.set(node, "type", FunctorType.INSTANCE);
+    }
+
     private void predicate(PredicateNode node) {
+        Attribute[] dependencies = new Attribute[node.arguments.size() + 1];
+        dependencies[0] = node.functor.attr("type");
+        int paramNum = node.paramNum;
+        forEachIndexed(node.arguments, (i, arg) -> {
+            dependencies[i + 1] = arg.attr("type");
+            R.set(arg, "index", i);
+        });
 
-            this.inferenceContext = node;
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+                Type maybeFunctorType = r.get(0);
 
-            Attribute[] dependencies = new Attribute[node.arguments.size() + 1];
-            dependencies[0] = node.functor.attr("type");
-            forEachIndexed(node.arguments, (i, arg) -> {
-                dependencies[i + 1] = arg.attr("type");
-                R.set(arg, "index", i);
+                if (!(maybeFunctorType instanceof FunctorType)) {
+                    r.error("trying to call a non-functor expression: " + node.functor, node.functor);
+                    return;
+                }
+
+                FunctorType functorType = cast(maybeFunctorType);
+                r.set(0, BoolType.INSTANCE); //???????????????
+
+                List<ExpressionNode> args = node.arguments;
+                //TODO : faudra trouver un moyen dans la grammaire pour faire le overloading (si on le permet)
+                if (paramNum != args.size()) //ce check est maybe ptet redondant
+                    r.errorFor(format("wrong number of arguments, expected %d but got %d",
+                            paramNum, args.size()),
+                        node);
+
+                int checkedArgs = Math.min(paramNum, args.size());
+
+                for (int i = 0; i < checkedArgs; ++i) {
+                    Type argType = r.get(i + 1);
+                    if (!(argType instanceof AtomType))
+                        r.errorFor(format(
+                                "incompatible argument provided for argument %d: expected %s but got %s",
+                                i, AtomType.class, argType),
+                            node.arguments.get(i));
+                }
             });
 
-            R.rule(node, "type")
-                .using(dependencies)
-                .by(r -> {
-                    Type maybeFunctorType = r.get(0); //functor
-
-                    if (!(maybeFunctorType instanceof FunctorType)) {
-                        r.error("trying to call a non-function expression: " + node.functor, node.functor);
-                        return;
-                    }
-
-                    FunType functorType = cast(maybeFunctorType);
-                    r.set(0, functorType.returnType); //boolean
-
-                    //Type[] params = funType.paramTypes; //pas besoin car atomes
-                    List<ExpressionNode> args = node.arguments;
-
-                    /*if (params.length != args.size())
-                        r.errorFor(format("wrong number of arguments, expected %d but got %d",
-                            params.length, args.size()),
-                            node);
-*/
-                    int checkedArgs = Math.min(params.length, args.size());
-
-                    for (int i = 0; i < checkedArgs; ++i) {
-                        Type argType = r.get(i + 1);
-                        Type paramType = funType.paramTypes[i];
-                        if (!isAssignableTo(argType, paramType))
-                            r.errorFor(format(
-                                "incompatible argument provided for argument %d: expected %s but got %s",
-                                i, paramType, argType),
-                                node.arguments.get(i));
-                    }
-                });
-        }
+    }
 
 
     // endregion
