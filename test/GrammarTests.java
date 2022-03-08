@@ -47,15 +47,21 @@ public class GrammarTests extends AutumnTestFixture {
     }
 
     @Test
-    public void testLiteralAtom () {
+    public void testLogicExpression () {
         rule = grammar.expression;
 
-        //successExpect("_atom", atomlit("_atom"));
-        successExpect("._atom2", new LogicNode(null, atomlit("_atom2")));
+        successExpect("._atomFact", new LogicNode(null, atomlit("_atomFact")));
+        failure("_atomFact"); //need a DOT
+        successExpect(".dog(_poodle)",
+            new LogicNode(null,
+                new PredicateNode(null,
+                    new FunctorNode(null, "dog"), asList(atomlit("_poodle")))));
         successExpect(".dog(_poodle, _labrador)",
             new LogicNode(null,
                 new PredicateNode(null,
                         new FunctorNode(null, "dog"), asList(atomlit("_poodle"), atomlit("_labrador")))));
+        failure(".dog(poodle)"); //not an atom
+        failure(".dog(_poodle, labrador)"); //not an atom
     }
 
     // ---------------------------------------------------------------------------------------------

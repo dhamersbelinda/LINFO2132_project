@@ -596,7 +596,7 @@ public final class SemanticAnalysis
     private void logicExpr (LogicNode node)
     {
         R.rule(node, "type")
-            .using(node.aNode.attr("type")) //will this give expressionNode or more specific
+            .using(node.aNode.attr("type")) //gives the specific type and not just ExpressionNode
             .by(r -> {
                 Type aNode  = r.get(0);
                 r.set(0, r.get(0));
@@ -604,8 +604,7 @@ public final class SemanticAnalysis
     }
 
     private void functor(FunctorNode node) { //TODO : besoin de contexte?
-        //TODO: what checks could we do here? puisque c'est juste un identifier
-
+        //TODO: are additional checks necessary
         R.set(node, "type", FunctorType.INSTANCE);
     }
 

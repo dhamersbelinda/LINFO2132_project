@@ -156,6 +156,8 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
     @Test public void testVarDecl() {
         successInput("var x: Int = 1; return x");
         successInput("._akjfdglkjdlfkg");
+        successInput(".dog(_poodle, _labrador)" +
+            ".dog(_chihuahua)");
         successInput("var x: Float = 2.0; return x");
 
         successInput("var x: Int = 0; return x = 3");
@@ -167,6 +169,16 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
 
         // implicit conversions
         successInput("var x: Float = 1 ; x = 2");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
+    @Test public void testLogicExpr() {
+        successInput("._atomFact");
+        successInput(".dog(_poodle)");
+        successInput(".dog(_poodle, _labrador)");
+        successInput(".dog(_poodle, _labrador)\n" +
+            ".cat(_siamese, _persian)");
     }
 
     // ---------------------------------------------------------------------------------------------

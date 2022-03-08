@@ -3,7 +3,7 @@ package norswap.sigh.types;
 public final class FunctorType extends Type
 {
     public static final FunctorType INSTANCE = new FunctorType();
-    private FunctorType () {} //should we store the number of args? -> nope, only for predicate
+    private FunctorType () {}
 
     @Override public boolean isPrimitive () {
         return false;
