@@ -4,20 +4,28 @@ import norswap.autumn.positions.Span;
 import norswap.utils.Util;
 import java.util.List;
 
-public class PredicateNode extends ExpressionNode{
-    public final FunctorNode functor;
-    public final List<ExpressionNode> arguments;
-    public final Integer paramNum;
+public class PredicateNode extends DeclarationNode
+{
+    public final String name;
+    public final List<AtomLiteralNode> parameters; //todo check if they're all atoms in the semantics
 
-    public PredicateNode (Span span, Object aNode, Object arguments) {
+    @SuppressWarnings("unchecked")
+    public PredicateNode
+        (Span span, Object name, Object parameters) {
         super(span);
-        this.functor = Util.cast(aNode, FunctorNode.class);
-        this.arguments = Util.cast(arguments, List.class);
-        this.paramNum = this.arguments.size();
+        this.name = Util.cast(name, String.class);
+        this.parameters = Util.cast(parameters, List.class);
     }
 
-    @Override public String contents ()
-    {
-        return functor.contents() + " as predicate with " + this.paramNum + " arguments";
-    } //can change so it shows atoms too
+    @Override public String name () {
+        return name;
+    }
+
+    @Override public String contents () {
+        return "pred " + name;
+    }
+
+    @Override public String declaredThing () {
+        return "predicate";
+    }
 }

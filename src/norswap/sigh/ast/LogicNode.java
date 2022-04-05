@@ -5,11 +5,11 @@ import norswap.utils.Util;
 
 public class LogicNode extends ExpressionNode
 {
-    public final ExpressionNode aNode;
+    public final SighNode aNode;
 
     public LogicNode (Span span, Object aNode) {
         super(span);
-        this.aNode = Util.cast(aNode, ExpressionNode.class);
+        this.aNode = Util.cast(aNode, SighNode.class);
     }
 
     @Override public String contents ()

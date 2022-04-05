@@ -124,7 +124,6 @@ public final class SemanticAnalysis
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
         walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
-        walker.register(FunctorNode.class,              PRE_VISIT,  analysis::functor);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
 
         // types
@@ -400,6 +399,28 @@ public final class SemanticAnalysis
 
     // ---------------------------------------------------------------------------------------------
 
+    private void predicate (PredicateNode node)
+    {
+        scope.declare(node.name, node);
+        scope = new Scope(node, scope);
+        R.set(node, "scope", scope);
+
+        Attribute[] dependencies = new Attribute[node.parameters.size()];
+        forEachIndexed(node.parameters, (i, param) ->
+            dependencies[i] = param.attr("type"));
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by (r -> {
+                Type[] paramTypes = new Type[node.parameters.size()];
+                for (int i = 0; i < paramTypes.length; ++i)
+                    paramTypes[i] = r.get(i);
+                r.set(0, new FunType(r.get(0), paramTypes));
+            });
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
     private void funCall (FunCallNode node)
     {
         this.inferenceContext = node;
@@ -602,55 +623,6 @@ public final class SemanticAnalysis
                 r.set(0, r.get(0));
             });
     }
-
-    private void functor(FunctorNode node) { //TODO : besoin de contexte?
-        //TODO: are additional checks necessary
-        R.set(node, "type", FunctorType.INSTANCE);
-    }
-
-    private void predicate(PredicateNode node) {
-        Attribute[] dependencies = new Attribute[node.arguments.size() + 1];
-        dependencies[0] = node.functor.attr("type");
-        int paramNum = node.paramNum;
-        forEachIndexed(node.arguments, (i, arg) -> {
-            dependencies[i + 1] = arg.attr("type");
-            R.set(arg, "index", i);
-        });
-
-        R.rule(node, "type")
-            .using(dependencies)
-            .by(r -> {
-                Type maybeFunctorType = r.get(0);
-
-                if (!(maybeFunctorType instanceof FunctorType)) {
-                    r.error("trying to call a non-functor expression: " + node.functor, node.functor);
-                    return;
-                }
-
-                FunctorType functorType = cast(maybeFunctorType);
-                r.set(0, BoolType.INSTANCE); //???????????????
-
-                List<ExpressionNode> args = node.arguments;
-                //TODO : faudra trouver un moyen dans la grammaire pour faire le overloading (si on le permet)
-                if (paramNum != args.size()) //ce check est maybe ptet redondant
-                    r.errorFor(format("wrong number of arguments, expected %d but got %d",
-                            paramNum, args.size()),
-                        node);
-
-                int checkedArgs = Math.min(paramNum, args.size());
-
-                for (int i = 0; i < checkedArgs; ++i) {
-                    Type argType = r.get(i + 1);
-                    if (!(argType instanceof AtomType))
-                        r.errorFor(format(
-                                "incompatible argument provided for argument %d: expected %s but got %s",
-                                i, AtomType.class, argType),
-                            node.arguments.get(i));
-                }
-            });
-
-    }
-
 
     // endregion
     // =============================================================================================

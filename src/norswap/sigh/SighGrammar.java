@@ -100,9 +100,6 @@ public class SighGrammar extends Grammar
         identifier
         .push($ -> new ReferenceNode($.span(), $.$[0]));
 
-    public rule functor =
-        identifier
-        .push($ -> new FunctorNode($.span(), $.$[0]));
 
     public rule constructor =
         seq(DOLLAR, reference)
@@ -117,7 +114,7 @@ public class SighGrammar extends Grammar
             .as_list(AtomLiteralNode.class));
 
     public rule predicate =
-        seq(functor, LPAREN, atoms, RPAREN)
+        seq(identifier, LPAREN, atoms, RPAREN)
         .push($ -> new PredicateNode($.span(), $.$[0], $.$[1]));
 
     public rule paren_expression = lazy(() ->
@@ -206,7 +203,7 @@ public class SighGrammar extends Grammar
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
     public rule logic_expression =
-        seq(DOT, choice(predicate, atom_identifier))
+        seq(DOT, choice(atom_identifier, predicate))
             .push($ -> new LogicNode($.span(), $.$[0]));
 
     public rule expression = //faut rien changer ici non?

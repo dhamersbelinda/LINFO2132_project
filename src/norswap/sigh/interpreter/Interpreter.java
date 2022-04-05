@@ -64,6 +64,7 @@ public final class Interpreter
         visitor.register(IntLiteralNode.class,           this::intLiteral);
         visitor.register(FloatLiteralNode.class,         this::floatLiteral);
         visitor.register(StringLiteralNode.class,        this::stringLiteral);
+        visitor.register(AtomLiteralNode.class,          this::atomLiteral);
         visitor.register(ReferenceNode.class,            this::reference);
         visitor.register(ConstructorNode.class,          this::constructor);
         visitor.register(ArrayLiteralNode.class,         this::arrayLiteral);
@@ -74,6 +75,9 @@ public final class Interpreter
         visitor.register(UnaryExpressionNode.class,      this::unaryExpression);
         visitor.register(BinaryExpressionNode.class,     this::binaryExpression);
         visitor.register(AssignmentNode.class,           this::assignment);
+
+        // logic stuff
+        visitor.register(LogicNode.class,                this::logicExpression);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -142,6 +146,16 @@ public final class Interpreter
 
     private String stringLiteral (StringLiteralNode node) {
         return node.value;
+    }
+
+    private String atomLiteral (AtomLiteralNode node) {
+        return node.name;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
+    private String logicExpression (LogicNode node) {
+        return node.contents();
     }
 
     // ---------------------------------------------------------------------------------------------

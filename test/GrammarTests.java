@@ -53,17 +53,19 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect("._atomFact", new LogicNode(null, atomlit("_atomFact")));
         failure("._"); //anonymous variable should only be used for unification
         failure("_atomFact"); //needs a DOT
+
         successExpect(".dog(_poodle)",
             new LogicNode(null,
                 new PredicateNode(null,
-                    new FunctorNode(null, "dog"), asList(atomlit("_poodle")))));
+                    "dog", asList(atomlit("_poodle")))));
         successExpect(".dog(_poodle, _labrador)",
             new LogicNode(null,
                 new PredicateNode(null,
-                        new FunctorNode(null, "dog"), asList(atomlit("_poodle"), atomlit("_labrador")))));
+                        "dog", asList(atomlit("_poodle"), atomlit("_labrador")))));
         failure(".dog(poodle)"); //not an atom
         failure("._dog(_poodle)"); //functor is should not be an atom identifier
         failure(".dog(_poodle, labrador)"); //not an atom
+
     }
 
     // ---------------------------------------------------------------------------------------------
