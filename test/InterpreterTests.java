@@ -127,8 +127,8 @@ public final class InterpreterTests extends TestFixture {
     public void x () {
         checkExpr("._a", "_a");
         //checkExpr(".dog(_poodle)", "dog [_poodle]");
-        check(".dog(_poodle, _labrador); .dog(_persian)",
-            "dog [_poodle, _labrador]");
+        check(".dog(_poodle, _labrador); return .dog(_persian)",
+            "dog[_poodle,_labrador,_persian]");
     }
 
     // ---------------------------------------------------------------------------------------------

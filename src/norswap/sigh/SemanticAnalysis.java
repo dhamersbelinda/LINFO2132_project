@@ -416,7 +416,6 @@ public final class SemanticAnalysis
         }
 
         scope.declare(node.name, node);
-        scope = new Scope(node, scope);
         R.set(node, "scope", scope);
         //System.out.println("sup ");
 

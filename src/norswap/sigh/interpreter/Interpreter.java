@@ -12,6 +12,7 @@ import norswap.utils.Util;
 import norswap.utils.exceptions.Exceptions;
 import norswap.utils.exceptions.NoStackException;
 import norswap.utils.visitors.ValuedVisitor;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -156,41 +157,34 @@ public final class Interpreter
 
     private String logicExpression (LogicNode node) {
         if (node.aNode instanceof PredicateNode){
-            return ((PredicateNode) node.aNode).name + " "
-                + predicate((PredicateNode) node.aNode).toString();
+            return predicate((PredicateNode) node.aNode);
         }
         return node.contents();
     }
 
-    private Object predicate (PredicateNode node) {
+    private String predicate (PredicateNode node) {
         //funcall
         node.parameters.forEach(this::run);
 
         Scope scope = reactor.get(node, "scope"); //todo identify with something else than node
         DeclarationNode decl = reactor.get(node, "decl");
-        ScopeStorage x = reactor.get(node, "scopeStorage");
+        ScopeStorage x;
 
-        if (decl instanceof PredicateNode) {
+        if (decl instanceof PredicateNode)
             scope = scope.lookup(node.name).scope; //todo wrong scope
-            x = (scope == rootScope) ? rootStorage : storage;
 
-            for (int i = 0; i < node.parameters.size(); i++) {
-                if (x.get(scope, node.parameters.get(i).name) == null)
-                    x.set(scope, node.parameters.get(i).name, true);
-            }
-        }
-
-        if (x == null)
-            x = new ScopeStorage(scope, storage);
-            reactor.set(node, "scopeStorage", x);
-
-        storage = x;
+        x = (scope == rootScope) ? rootStorage : storage;
 
         for (int i = 0; i < node.parameters.size(); i++) {
-            storage.set(scope, node.parameters.get(i).name, true);
+            String string = (String) x.get(scope, node.name);
+            if (string!=null)
+                string+=",";
+            else string = "";
+            string+=node.parameters.get(i).name;
+            x.set(scope, node.name, string);
         }
 
-        return buildFact(node);
+        return node.name + "[" + x.get(scope, node.name) + "]";
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -512,14 +506,6 @@ public final class Interpreter
         HashMap<String, Object> struct = new HashMap<>();
         for (int i = 0; i < node.fields.size(); ++i)
             struct.put(node.fields.get(i).name, args[i]);
-        return struct;
-    }
-
-    private HashSet<String> buildFact (PredicateNode node)
-    {
-        HashSet<String> struct = new HashSet<>();
-        for (int i = 0; i < node.parameters.size(); ++i)
-            struct.add(node.parameters.get(i).name);
         return struct;
     }
 
