@@ -121,8 +121,14 @@ public final class InterpreterTests extends TestFixture {
         checkExpr("!false", true);
         checkExpr("!true", false);
         checkExpr("!!true", true);
+    }
+
+    @Test
+    public void x () {
         checkExpr("._a", "_a");
-        checkExpr(".blah(_dog)", "pred blah");
+        //checkExpr(".dog(_poodle)", "dog [_poodle]");
+        check(".dog(_poodle, _labrador); .dog(_persian)",
+            "dog [_poodle, _labrador]");
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -177,8 +177,7 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
         successInput("._atomFact");
         successInput(".dog(_poodle)");
         successInput(".dog(_poodle, _labrador)");
-        successInput(".dog(_poodle, _labrador)\n" +
-            ".cat(_siamese, _persian)");
+        successInput(".dog(_poodle, _labrador); .dog(_siamese); .dog(_persian)");
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import java.util.List;
 public class PredicateNode extends DeclarationNode
 {
     public final String name;
-    public final List<AtomLiteralNode> parameters; //todo check if they're all atoms in the semantics
+    public final List<AtomLiteralNode> parameters;
 
     @SuppressWarnings("unchecked")
     public PredicateNode
@@ -22,7 +22,7 @@ public class PredicateNode extends DeclarationNode
     }
 
     @Override public String contents () {
-        return "pred " + name;
+        return "pred " + name + " : " + parameters.toString();
     }
 
     @Override public String declaredThing () {

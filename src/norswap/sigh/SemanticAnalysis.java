@@ -401,9 +401,24 @@ public final class SemanticAnalysis
 
     private void predicate (PredicateNode node)
     {
+        final Scope scope_ref = this.scope;
+        DeclarationContext maybeCtx = scope_ref.lookup(node.name);
+        System.out.println(node.contents());
+
+        if (maybeCtx != null) {
+            R.set(node, "decl",  maybeCtx.declaration);
+            R.set(node, "scope", maybeCtx.scope);
+
+            R.rule(node, "type")
+                .using(maybeCtx.declaration, "type")
+                .by(Rule::copyFirst);
+            return;
+        }
+
         scope.declare(node.name, node);
         scope = new Scope(node, scope);
         R.set(node, "scope", scope);
+        //System.out.println("sup ");
 
         Attribute[] dependencies = new Attribute[node.parameters.size()];
         forEachIndexed(node.parameters, (i, param) ->
