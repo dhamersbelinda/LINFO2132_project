@@ -202,17 +202,25 @@ public class SighGrammar extends Grammar
         .infix(EQUALS,
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
-    public rule logic_expression =
-        seq(DOT, choice(atom_identifier, predicate))
-            .push($ -> new LogicNode($.span(), $.$[0]));
+    //public rule logic_expression =
+        //seq(DOT, choice(atom_identifier, predicate))
+            //.push($ -> new LogicNode($.span(), $.$[0]));
+
+    public rule atom_decl =
+        seq(DOT, atom_identifier)
+        .push($ -> new AtomDeclarationNode($.span(), $.$[0]));
+
+    public rule predicate_decl =
+        seq(DOT, predicate)
+            .push($ -> new PredicateDeclarationNode($.span(), $.$[0]));
 
     public rule expression = //faut rien changer ici non?
-        choice(logic_expression, assignment_expression);
+        choice(assignment_expression, atom_decl, predicate_decl);
 
     public rule expression_stmt =
         expression
         .filter($ -> {
-            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof LogicNode))
+            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode ))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
                 return false;
             $.push(new ExpressionStatementNode($.span(), $.$[0]));
             return true;
@@ -230,6 +238,9 @@ public class SighGrammar extends Grammar
         this.block,
         this.var_decl,
         this.fun_decl,
+        this.atom_decl,
+        this.predicate_decl,
+        //this.logic_expression,
         this.struct_decl,
         this.if_stmt,
         this.while_stmt,

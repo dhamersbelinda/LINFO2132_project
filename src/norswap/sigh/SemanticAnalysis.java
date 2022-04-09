@@ -111,7 +111,9 @@ public final class SemanticAnalysis
         // expressions
         walker.register(IntLiteralNode.class,           PRE_VISIT,  analysis::intLiteral);
         walker.register(FloatLiteralNode.class,         PRE_VISIT,  analysis::floatLiteral);
+
         walker.register(StringLiteralNode.class,        PRE_VISIT,  analysis::stringLiteral);
+
         walker.register(AtomLiteralNode.class,          PRE_VISIT,  analysis::atomLiteral);
         walker.register(ReferenceNode.class,            PRE_VISIT,  analysis::reference);
         walker.register(ConstructorNode.class,          PRE_VISIT,  analysis::constructor);
@@ -123,8 +125,11 @@ public final class SemanticAnalysis
         walker.register(UnaryExpressionNode.class,      PRE_VISIT,  analysis::unaryExpression);
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
-        walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
+
+        //walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
+        walker.register(AtomDeclarationNode.class,      PRE_VISIT,  analysis::atomDecl);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
+        walker.register(PredicateDeclarationNode.class, PRE_VISIT,  analysis::predicateDecl);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -177,6 +182,11 @@ public final class SemanticAnalysis
 
     private void atomLiteral (AtomLiteralNode node) {
         R.set(node, "type", AtomType.INSTANCE);
+    }
+
+    private void predicate (PredicateNode node)
+    {
+        R.set(node, "type", PredicateType.INSTANCE);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -399,8 +409,10 @@ public final class SemanticAnalysis
 
     // ---------------------------------------------------------------------------------------------
 
-    private void predicate (PredicateNode node)
+
+    private void predicateDecl (PredicateDeclarationNode nodeDecl)
     {
+        PredicateNode node = nodeDecl.predicate;
         final Scope scope_ref = this.scope;
         DeclarationContext maybeCtx = scope_ref.lookup(node.name);
         System.out.println(node.contents());
@@ -409,10 +421,10 @@ public final class SemanticAnalysis
             R.set(node, "decl",  maybeCtx.declaration);
             R.set(node, "scope", maybeCtx.scope);
 
-            R.rule(node, "type")
+            /*R.rule(node, "type")
                 .using(maybeCtx.declaration, "type")
                 .by(Rule::copyFirst);
-            return;
+            return;*/
         }
 
         scope.declare(node.name, node);
@@ -423,16 +435,15 @@ public final class SemanticAnalysis
         forEachIndexed(node.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
-        R.rule(node, "type")
+        /*R.rule(node, "type")
             .using(dependencies)
             .by (r -> {
                 Type[] paramTypes = new Type[node.parameters.size()];
                 for (int i = 0; i < paramTypes.length; ++i)
                     paramTypes[i] = r.get(i);
                 r.set(0, new FunType(r.get(0), paramTypes));
-            });
+            });*/
     }
-
     // ---------------------------------------------------------------------------------------------
 
     private void funCall (FunCallNode node)
@@ -628,7 +639,7 @@ public final class SemanticAnalysis
                 r.errorFor("Trying to assign to an non-lvalue expression.", node.left);
         });
     }
-    private void logicExpr (LogicNode node)
+    /*private void logicExpr (LogicNode node)
     {
         R.rule(node, "type")
             .using(node.aNode.attr("type")) //gives the specific type and not just ExpressionNode
@@ -636,7 +647,7 @@ public final class SemanticAnalysis
                 Type aNode  = r.get(0);
                 r.set(0, r.get(0));
             });
-    }
+    }*/
 
     // endregion
     // =============================================================================================
@@ -800,6 +811,19 @@ public final class SemanticAnalysis
                     node.name, expected, actual),
                     node.initializer);
         });
+    }
+
+    private void atomDecl (AtomDeclarationNode node) //based on varDecl
+    {
+        this.inferenceContext = node.atom;
+
+        scope.declare(node.name(), node);
+        R.set(node, "scope", scope);
+
+        //R.rule(node, "type")
+            //.using(AtomType.class, "value") //node.type
+            //.by(Rule::copyFirst);
+
     }
 
     // ---------------------------------------------------------------------------------------------

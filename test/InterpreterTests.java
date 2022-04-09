@@ -123,13 +123,13 @@ public final class InterpreterTests extends TestFixture {
         checkExpr("!!true", true);
     }
 
-    @Test
-    public void x () {
+    /*@Test
+    public void x () { //at the moment, nothing is supposed to be returned
         checkExpr("._a", "_a");
-        //checkExpr(".dog(_poodle)", "dog [_poodle]");
+        checkExpr(".dog(_poodle)", "dog[_poodle]");
         check(".dog(_poodle, _labrador); return .dog(_persian)",
             "dog[_poodle,_labrador,_persian]");
-    }
+    }*/
 
     // ---------------------------------------------------------------------------------------------
 

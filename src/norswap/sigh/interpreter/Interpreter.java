@@ -155,7 +155,7 @@ public final class Interpreter
 
     // ---------------------------------------------------------------------------------------------
 
-    private String logicExpression (LogicNode node) {
+    private String logicExpression (LogicNode node) { //should not be needed any more
         if (node.aNode instanceof PredicateNode){
             return predicate((PredicateNode) node.aNode);
         }

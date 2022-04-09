@@ -35,7 +35,9 @@ public class GrammarTests extends AutumnTestFixture {
 
         successExpect("42", intlit(42));
         //successExpect("_asd.", new AtomLiteralNode(null, "_asd"));
-        successExpect("._a", new LogicNode(null, new AtomLiteralNode(null, "_a")));
+        successExpect("._a",
+            new AtomDeclarationNode(null,
+                new AtomLiteralNode(null, "_a")));
         successExpect("42.0", floatlit(42d));
         successExpect("\"hello\"", new StringLiteralNode(null, "hello"));
         successExpect("(42)", new ParenthesizedNode(null, intlit(42)));
@@ -50,16 +52,17 @@ public class GrammarTests extends AutumnTestFixture {
     public void testLogicExpression () {
         rule = grammar.expression;
 
-        successExpect("._atomFact", new LogicNode(null, atomlit("_atomFact")));
+        successExpect("._a", new AtomDeclarationNode(null, new AtomLiteralNode(null, "_a")));
+        successExpect("._atomFact", new AtomDeclarationNode(null, atomlit("_atomFact")));
         failure("._"); //anonymous variable should only be used for unification
         failure("_atomFact"); //needs a DOT
 
         successExpect(".dog(_poodle)",
-            new LogicNode(null,
+            new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                     "dog", asList(atomlit("_poodle")))));
         successExpect(".dog(_poodle, _labrador)",
-            new LogicNode(null,
+            new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                         "dog", asList(atomlit("_poodle"), atomlit("_labrador")))));
         failure(".dog(poodle)"); //not an atom
