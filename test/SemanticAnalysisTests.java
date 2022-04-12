@@ -155,9 +155,9 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
 
     @Test public void testVarDecl() {
         successInput("var x: Int = 1; return x");
-        successInput("._akjfdglkjdlfkg");
-        successInput(".dog(_poodle, _labrador)" +
-            ".dog(_chihuahua)");
+        successInput(".._akjfdglkjdlfkg");
+        successInput("..dog(_poodle, _labrador)" +
+            "..dog(_chihuahua)");
         successInput("var x: Float = 2.0; return x");
 
         successInput("var x: Int = 0; return x = 3");
@@ -174,10 +174,19 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
     // ---------------------------------------------------------------------------------------------
 
     @Test public void testLogicExpr() {
-        successInput("._atomFact");
-        successInput(".dog(_poodle)");
-        successInput(".dog(_poodle, _labrador)");
-        successInput(".dog(_poodle, _labrador); .dog(_siamese); .dog(_persian)");
+        successInput(".._atomFact");
+        successInput("..dog(_poodle)");
+        successInput("..dog(_poodle, _labrador)");
+        successInput("..dog(_poodle, _labrador); ..dog(_siamese); ..dog(_persian)");
+
+        failureInputWith("var x: Int = 1;\n ..x ?= dog(_poodle); x = 2",
+            "lvalue needs to be boolean");
+        failureInputWith("var x: Bool = false;\n ..x ?= 1 + 2; x = true",
+            "Trying to assign a non-compatible rvalue to a boolean lvalue.");
+        //TODO don't know how to test the last error
+        successInput("var x: Bool = false;\n ..x ?= dog(_poodle); x = true");
+        successInput("var x: Bool = false;\n ..x ?= true; x = false");
+        successInput("var x: Bool = false;\n ..x ?= _atomFact; x = false");
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -167,7 +167,7 @@ public final class Interpreter
         node.parameters.forEach(this::run);
 
         Scope scope = reactor.get(node, "scope"); //todo identify with something else than node
-        DeclarationNode decl = reactor.get(node, "decl");
+        ExpressionNode decl = reactor.get(node, "decl");
         ScopeStorage x;
 
         if (decl instanceof PredicateNode)

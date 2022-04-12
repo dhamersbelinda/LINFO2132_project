@@ -40,6 +40,7 @@ public class SighGrammar extends Grammar
     public rule COLON           = word(":");
     public rule EQUALS_EQUALS   = word("==");
     public rule EQUALS          = word("=");
+    public rule BOOL_QUERY      = word("?=");
     public rule BANG_EQUAL      = word("!=");
     public rule LANGLE_EQUAL    = word("<=");
     public rule RANGLE_EQUAL    = word(">=");
@@ -49,6 +50,7 @@ public class SighGrammar extends Grammar
     public rule BAR_BAR         = word("||");
     public rule BANG            = word("!");
     public rule DOT             = word(".");
+    public rule DOT_DOT         = word("..");
     public rule DOLLAR          = word("$");
     public rule COMMA           = word(",");
 
@@ -135,6 +137,8 @@ public class SighGrammar extends Grammar
         floating,
         integer,
         string,
+        //atom_identifier,
+        //predicate,
         paren_expression,
         array);
 
@@ -202,25 +206,38 @@ public class SighGrammar extends Grammar
         .infix(EQUALS,
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
+    /*public rule bool_query = seq(DOT, right_expression()
+        .operand(choice(atom_identifier, predicate, or_expression)) //TODO needs to be replaced with comb
+        .infix(BOOL_QUERY,
+            $ -> new BoolQueryNode($.span(), $.$[0], $.$[1])));*/
+
+    public rule bool_query = seq(
+        DOT_DOT,
+        reference,
+        BOOL_QUERY,
+        choice(atom_identifier, predicate, or_expression)
+        ).push($ -> new BoolQueryNode($.span(), $.$[0], $.$[1]));
+
     //public rule logic_expression =
         //seq(DOT, choice(atom_identifier, predicate))
             //.push($ -> new LogicNode($.span(), $.$[0]));
 
     public rule atom_decl =
-        seq(DOT, atom_identifier)
+        seq( DOT_DOT, atom_identifier)
         .push($ -> new AtomDeclarationNode($.span(), $.$[0]));
 
     public rule predicate_decl =
-        seq(DOT, predicate)
+        seq(DOT_DOT, predicate)
             .push($ -> new PredicateDeclarationNode($.span(), $.$[0]));
 
     public rule expression = //faut rien changer ici non?
-        choice(assignment_expression, atom_decl, predicate_decl);
+        //choice(assignment_expression);
+        choice(bool_query, assignment_expression);
 
     public rule expression_stmt =
         expression
         .filter($ -> {
-            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode ))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
+            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof BoolQueryNode))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
                 return false;
             $.push(new ExpressionStatementNode($.span(), $.$[0]));
             return true;
@@ -234,18 +251,27 @@ public class SighGrammar extends Grammar
     public rule type =
         seq(array_type);
 
+    public rule logic_declaration = lazy(() -> choice(
+       this.atom_decl,
+       this.predicate_decl
+    ));
+
     public rule statement = lazy(() -> choice(
+        this.logic_declaration,
         this.block,
         this.var_decl,
         this.fun_decl,
         this.atom_decl,
         this.predicate_decl,
+
         //this.logic_expression,
         this.struct_decl,
         this.if_stmt,
         this.while_stmt,
         this.return_stmt,
-        this.expression_stmt));
+        this.expression_stmt
+        //this.logic_declaration
+        ));
 
     public rule statements =
         statement.at_least(0)

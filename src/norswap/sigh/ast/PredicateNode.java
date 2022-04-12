@@ -4,7 +4,7 @@ import norswap.autumn.positions.Span;
 import norswap.utils.Util;
 import java.util.List;
 
-public class PredicateNode extends DeclarationNode
+public class PredicateNode extends ExpressionNode
 {
     public final String name;
     public final List<AtomLiteralNode> parameters;
@@ -17,7 +17,7 @@ public class PredicateNode extends DeclarationNode
         this.parameters = Util.cast(parameters, List.class);
     }
 
-    @Override public String name () {
+    public String name () {
         return name;
     }
 
@@ -25,7 +25,7 @@ public class PredicateNode extends DeclarationNode
         return "pred " + name + " : " + parameters.toString();
     }
 
-    @Override public String declaredThing () {
+    public String declaredThing () {
         return "predicate";
     }
 }

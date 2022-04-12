@@ -4,6 +4,10 @@ import norswap.sigh.ast.*;
 import norswap.sigh.types.AtomType;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import static java.util.Arrays.asList;
 import static norswap.sigh.ast.BinaryOperator.*;
 
@@ -35,9 +39,9 @@ public class GrammarTests extends AutumnTestFixture {
 
         successExpect("42", intlit(42));
         //successExpect("_asd.", new AtomLiteralNode(null, "_asd"));
-        successExpect("._a",
+        /*successExpect("._a",
             new AtomDeclarationNode(null,
-                new AtomLiteralNode(null, "_a")));
+                new AtomLiteralNode(null, "_a")));*/
         successExpect("42.0", floatlit(42d));
         successExpect("\"hello\"", new StringLiteralNode(null, "hello"));
         successExpect("(42)", new ParenthesizedNode(null, intlit(42)));
@@ -50,31 +54,88 @@ public class GrammarTests extends AutumnTestFixture {
 
     @Test
     public void testLogicExpression () {
-        rule = grammar.expression;
+        rule = grammar.statement;
 
-        successExpect("._a", new AtomDeclarationNode(null, new AtomLiteralNode(null, "_a")));
-        successExpect("._atomFact", new AtomDeclarationNode(null, atomlit("_atomFact")));
-        failure("._"); //anonymous variable should only be used for unification
-        failure("_atomFact"); //needs a DOT
+        successExpect(".._a", new AtomDeclarationNode(null, new AtomLiteralNode(null, "_a")));
+        successExpect(".._atomFact", new AtomDeclarationNode(null, atomlit("_atomFact")));
+        failure(".._"); //anonymous variable should only be used for unification
+        //failure("_atomFact"); //needs a DOT
 
-        successExpect(".dog(_poodle)",
+        successExpect("..dog(_poodle)",
             new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                     "dog", asList(atomlit("_poodle")))));
-        successExpect(".dog(_poodle, _labrador)",
+        successExpect("..dog(_poodle, _labrador)",
             new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                         "dog", asList(atomlit("_poodle"), atomlit("_labrador")))));
-        failure(".dog(poodle)"); //not an atom
-        failure("._dog(_poodle)"); //functor is should not be an atom identifier
-        failure(".dog(_poodle, labrador)"); //not an atom
+        /*successExpect(".dog(_poodle, labrador)", //TODO this test should allow this to be parsed, but we need to check that there are no atoms in funcall
+            new FunCallNode(null,
+                new ReferenceNode(null, "dog"),
+                asList(atomlit("_poodle"), new ReferenceNode(null, "labrador"))
+            ));*/
+        failure("..dog(_poodle, labrador)");
+        /*successExpect(".dog(poodle)",
+            new ExpressionStatementNode(null,
+            new FunCallNode(null,
+            new ReferenceNode(null, "dog"),
+            asList(new ReferenceNode(null, "poodle"))
+        )));*/ //not an atom
+        failure("..dog(poodle)");
+        failure(".._dog(_poodle)"); //functor should not be an atom identifier
+    }
 
+    @Test
+    public void boolqueries () {
+        rule = grammar.expression_stmt;
+        successExpect("..boolean1 ?= 1 + 2",
+            new ExpressionStatementNode(null,
+            new BoolQueryNode(null,
+                new ReferenceNode(null, "boolean1"),
+                new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
+            ));
+        successExpect("..boolean1 ?= _atomFact",
+            new ExpressionStatementNode(null,
+            new BoolQueryNode(null,
+                new ReferenceNode(null, "boolean1"),
+                atomlit("_atomFact"))
+        ));
+        successExpect("..boolean1 ?= dog(_poodle)",
+            new ExpressionStatementNode(null,
+            new BoolQueryNode(null,
+                new ReferenceNode(null, "boolean1"),
+                new PredicateNode(null, "dog",
+                    Arrays.asList(new AtomLiteralNode(null, "_poodle"))
+                ))
+        ));
+        failure("..boolean1 ?= dog(_poodle) + 1");
+        /*successExpect(".boolean1 ?= dog(_poodle) ?= _atomFact",
+            new ExpressionStatementNode(null,
+                new BoolQueryNode(null,
+                    new ReferenceNode(null, "boolean1"),
+                    new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                            new PredicateNode(null,
+                                "dog",
+                                asList(atomlit("_poodle"))),
+                            atomlit("_atomFact"))))));*/
+        failure("..boolean1 ?= dog(_poodle) ?= _atomFact");
+        successExpect("..boolean1 ?= dog(1)",
+            new ExpressionStatementNode(null,
+                new BoolQueryNode(null,
+                    new ReferenceNode(null, "boolean1"),
+                    new FunCallNode(null,
+                        new ReferenceNode(null, "dog"),
+                        asList(intlit(1)))
+                )));
+        //TODO think of more tests
     }
 
     // ---------------------------------------------------------------------------------------------
 
     @Test
     public void testNumericBinary () {
+        rule = grammar.expression;
         successExpect("1 + 2", new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)));
         successExpect("2 - 1", new BinaryExpressionNode(null, intlit(2), SUBTRACT,  intlit(1)));
         successExpect("2 * 3", new BinaryExpressionNode(null, intlit(2), MULTIPLY, intlit(3)));

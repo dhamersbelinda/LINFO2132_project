@@ -130,6 +130,7 @@ public final class SemanticAnalysis
         walker.register(AtomDeclarationNode.class,      PRE_VISIT,  analysis::atomDecl);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
         walker.register(PredicateDeclarationNode.class, PRE_VISIT,  analysis::predicateDecl);
+        walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -410,12 +411,12 @@ public final class SemanticAnalysis
     // ---------------------------------------------------------------------------------------------
 
 
-    private void predicateDecl (PredicateDeclarationNode nodeDecl)
+    private void predicateDecl (PredicateDeclarationNode node)
     {
-        PredicateNode node = nodeDecl.predicate;
+        //PredicateNode node = nodeDecl.predicate;
         final Scope scope_ref = this.scope;
-        DeclarationContext maybeCtx = scope_ref.lookup(node.name);
-        System.out.println(node.contents());
+        DeclarationContext maybeCtx = scope_ref.lookup(node.name());
+        //System.out.println(node.contents());
 
         if (maybeCtx != null) {
             R.set(node, "decl",  maybeCtx.declaration);
@@ -427,12 +428,12 @@ public final class SemanticAnalysis
             return;*/
         }
 
-        scope.declare(node.name, node);
+        scope.declare(node.name(), node); //!!!
         R.set(node, "scope", scope);
         //System.out.println("sup ");
 
-        Attribute[] dependencies = new Attribute[node.parameters.size()];
-        forEachIndexed(node.parameters, (i, param) ->
+        Attribute[] dependencies = new Attribute[node.predicate.parameters.size()]; //!!!
+        forEachIndexed(node.predicate.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
         /*R.rule(node, "type")
@@ -639,6 +640,33 @@ public final class SemanticAnalysis
                 r.errorFor("Trying to assign to an non-lvalue expression.", node.left);
         });
     }
+
+    private void boolquery (BoolQueryNode node)
+    { //assignment
+        R.rule(node, "type")
+            .using(node.left.attr("type"), node.right.attr("type"))
+            .by(r -> {
+                Type left  = r.get(0);
+                System.out.println(left.getClass());
+                if (!left.equals(BoolType.INSTANCE))
+                    r.errorFor("lvalue needs to be boolean", node);
+                Type right = r.get(1);
+
+                r.set(0, r.get(0)); // the type of the assignment is the left-side type
+
+                if (node.left instanceof ReferenceNode
+                    ||  node.left instanceof FieldAccessNode
+                    ||  node.left instanceof ArrayAccessNode) {
+                    if (!((node.right instanceof PredicateNode) //TODO change to more general expressions
+                        || (node.right instanceof AtomLiteralNode) //same
+                        || (right.equals(BoolType.INSTANCE)))) //TODO dunno if this is right
+                        r.errorFor("Trying to assign a non-compatible rvalue to a boolean lvalue.", node);
+                }
+                else
+                    r.errorFor("Trying to assign to an non-lvalue expression.", node.left);
+            });
+    }
+
     /*private void logicExpr (LogicNode node)
     {
         R.rule(node, "type")
