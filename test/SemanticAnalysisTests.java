@@ -187,6 +187,7 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
         successInput("var x: Bool = false;\n ..x ?= dog(_poodle); x = true");
         successInput("var x: Bool = false;\n ..x ?= true; x = false");
         successInput("var x: Bool = false;\n ..x ?= _atomFact; x = false");
+        successInput("..dog(_poodle); ..cat(breed: Int) :- { return true }");
     }
 
     // ---------------------------------------------------------------------------------------------

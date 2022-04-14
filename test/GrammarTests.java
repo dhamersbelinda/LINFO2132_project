@@ -131,6 +131,25 @@ public class GrammarTests extends AutumnTestFixture {
         //TODO think of more tests
     }
 
+    @Test
+    public void predicate_rules () {
+        rule = grammar.statement;
+        successExpect("..cat(breed: Int) :- { return true }",
+            new PredicateRuleNode(null,
+                "cat",
+                asList(new ParameterNode(null,
+                    "breed",
+                    new SimpleTypeNode(null,
+                        "Int"))),
+                new BlockNode(null,
+                    asList(new ReturnNode(null,
+                        new ReferenceNode(null,
+                            "true"))))
+            ));
+        failure("..cat(breed) :- { return true }"); // not parameter
+        failure("..cat(breed: Int) :- true"); //TODO
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     @Test

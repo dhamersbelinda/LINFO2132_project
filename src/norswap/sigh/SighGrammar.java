@@ -41,6 +41,7 @@ public class SighGrammar extends Grammar
     public rule EQUALS_EQUALS   = word("==");
     public rule EQUALS          = word("=");
     public rule BOOL_QUERY      = word("?=");
+    public rule TURNSTILE       = word(":-");
     public rule BANG_EQUAL      = word("!=");
     public rule LANGLE_EQUAL    = word("<=");
     public rule RANGLE_EQUAL    = word(">=");
@@ -230,6 +231,16 @@ public class SighGrammar extends Grammar
         seq(DOT_DOT, predicate)
             .push($ -> new PredicateDeclarationNode($.span(), $.$[0]));
 
+    public rule predicate_rule = lazy(() ->
+        seq(DOT_DOT,
+            identifier,
+            LPAREN,
+            this.parameters,
+            RPAREN,
+            TURNSTILE,
+            this.block) //TODO do we really need the block with the braces?
+            .push($ -> new PredicateRuleNode($.span(), $.$[0], $.$[1], $.$[2])));
+
     public rule expression = //faut rien changer ici non?
         //choice(assignment_expression);
         choice(bool_query, assignment_expression);
@@ -253,7 +264,8 @@ public class SighGrammar extends Grammar
 
     public rule logic_declaration = lazy(() -> choice(
        this.atom_decl,
-       this.predicate_decl
+       this.predicate_decl,
+        this.predicate_rule
     ));
 
     public rule statement = lazy(() -> choice(
@@ -261,8 +273,8 @@ public class SighGrammar extends Grammar
         this.block,
         this.var_decl,
         this.fun_decl,
-        this.atom_decl,
-        this.predicate_decl,
+        //this.atom_decl,
+        //this.predicate_decl,
 
         //this.logic_expression,
         this.struct_decl,

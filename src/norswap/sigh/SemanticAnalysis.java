@@ -130,6 +130,7 @@ public final class SemanticAnalysis
         walker.register(AtomDeclarationNode.class,      PRE_VISIT,  analysis::atomDecl);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
         walker.register(PredicateDeclarationNode.class, PRE_VISIT,  analysis::predicateDecl);
+        walker.register(PredicateRuleNode.class,        PRE_VISIT,  analysis::predicateRule);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
 
         // types
@@ -411,39 +412,84 @@ public final class SemanticAnalysis
     // ---------------------------------------------------------------------------------------------
 
 
-    private void predicateDecl (PredicateDeclarationNode node)
-    {
-        //PredicateNode node = nodeDecl.predicate;
+    private void predicateDecl (PredicateDeclarationNode node) {
         final Scope scope_ref = this.scope;
-        DeclarationContext maybeCtx = scope_ref.lookup(node.name());
-        //System.out.println(node.contents());
+        DeclarationContext maybeCtx = scope_ref.lookup(node.predicate.name()); //!!!!
+        System.out.println(node.contents());
+
+        if (maybeCtx != null) {
+            R.set(node, "decl", maybeCtx.declaration);
+            R.set(node, "scope", maybeCtx.scope);
+
+            R.rule(node, "type")
+                .using(maybeCtx.declaration, "type")
+                .by(Rule::copyFirst);
+            return;
+        }
+
+        scope.declare(node.predicate.name(), node); //!!!!
+        R.set(node, "scope", scope);
+        //R.set(node, "type", PredicateType.INSTANCE); //!!!!
+
+        Attribute[] dependencies = new Attribute[node.predicate.parameters.size()]; //!!!!
+        forEachIndexed(node.predicate.parameters, (i, param) -> //!!!!
+            dependencies[i] = param.attr("type"));
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+                Type[] paramTypes = new Type[node.predicate.parameters.size()]; //!!!!
+                for (int i = 0; i < paramTypes.length; ++i)
+                    paramTypes[i] = r.get(i);
+                r.set(0, new FunType(r.get(0), paramTypes));
+            });
+        //TODO are all checks done ?
+    }
+
+    private void predicateRule (PredicateRuleNode node)
+    {
+        final Scope scope_ref = this.scope;
+        DeclarationContext maybeCtx = scope_ref.lookup(node.name()); //!!!!
+        System.out.println(node.contents());
 
         if (maybeCtx != null) {
             R.set(node, "decl",  maybeCtx.declaration);
             R.set(node, "scope", maybeCtx.scope);
 
-            /*R.rule(node, "type")
+            R.rule(node, "type")
                 .using(maybeCtx.declaration, "type")
                 .by(Rule::copyFirst);
-            return;*/
+            return;
         }
 
-        scope.declare(node.name(), node); //!!!
+        scope.declare(node.name(), node); //!!!!
         R.set(node, "scope", scope);
-        //System.out.println("sup ");
+        //R.set(node, "type", PredicateType.INSTANCE); //!!!!
 
-        Attribute[] dependencies = new Attribute[node.predicate.parameters.size()]; //!!!
-        forEachIndexed(node.predicate.parameters, (i, param) ->
+        scope = new Scope(node, scope);
+        R.set(node, "scope", scope);
+
+        Attribute[] dependencies = new Attribute[node.parameters.size()];
+        forEachIndexed(node.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
-        /*R.rule(node, "type")
+        R.rule(node, "type")
             .using(dependencies)
             .by (r -> {
                 Type[] paramTypes = new Type[node.parameters.size()];
                 for (int i = 0; i < paramTypes.length; ++i)
                     paramTypes[i] = r.get(i);
-                r.set(0, new FunType(r.get(0), paramTypes));
-            });*/
+                r.set(0, new FunType(BoolType.INSTANCE, paramTypes));
+            });
+
+        R.rule()
+            .using(node.block.attr("returns"))
+            .by(r -> {
+                boolean returns = r.get(0);
+                if (!returns)
+                    r.error("Missing return in function.", node);
+                // NOTE: The returned value presence & type is checked in returnStmt().
+            });
     }
     // ---------------------------------------------------------------------------------------------
 
