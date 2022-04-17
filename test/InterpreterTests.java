@@ -123,13 +123,16 @@ public final class InterpreterTests extends TestFixture {
         checkExpr("!!true", true);
     }
 
-    /*@Test
-    public void x () { //at the moment, nothing is supposed to be returned
-        checkExpr("._a", "_a");
-        checkExpr(".dog(_poodle)", "dog[_poodle]");
-        check(".dog(_poodle, _labrador); return .dog(_persian)",
-            "dog[_poodle,_labrador,_persian]");
-    }*/
+    @Test
+    public void x () {
+        rule = grammar.root;
+        check(".._a", null);
+        check(".._a; .._b",null);
+        check(".._a; ..dog(_poodle)", null);
+        check("..dog(_poodle, _labrador); ..dog(_persian)",
+            null);
+        check("..dog(_poodle); ..dog(breed: Int) :- { return true }", null);
+    }
 
     // ---------------------------------------------------------------------------------------------
 

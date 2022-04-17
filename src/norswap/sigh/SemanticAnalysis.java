@@ -466,8 +466,8 @@ public final class SemanticAnalysis
         R.set(node, "scope", scope);
         //R.set(node, "type", PredicateType.INSTANCE); //!!!!
 
-        scope = new Scope(node, scope);
-        R.set(node, "scope", scope);
+        //scope = new Scope(node, scope);
+        //R.set(node, "scope", scope);
 
         Attribute[] dependencies = new Attribute[node.parameters.size()];
         forEachIndexed(node.parameters, (i, param) ->

@@ -77,8 +77,10 @@ public final class Interpreter
         visitor.register(AssignmentNode.class,           this::assignment);
 
         // logic stuff
-        visitor.register(LogicNode.class,                this::logicExpression);
-        visitor.register(PredicateNode.class,            this::predicate);
+        visitor.register(AtomDeclarationNode.class,       this::atomDecl);
+        visitor.register(PredicateDeclarationNode.class,  this::predDecl);
+        visitor.register(PredicateRuleNode.class,         this::predRule);
+        visitor.register(BoolQueryNode.class,             this::query);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -155,36 +157,58 @@ public final class Interpreter
 
     // ---------------------------------------------------------------------------------------------
 
-    private String logicExpression (LogicNode node) { //should not be needed any more
-        if (node.aNode instanceof PredicateNode){
-            return predicate((PredicateNode) node.aNode);
+    private Void predDecl (PredicateDeclarationNode node) {
+        //funcall
+        node.predicate.parameters.forEach(this::run);
+        Scope scope = reactor.get(node, "scope");
+        DeclarationNode decl = reactor.get(node, "decl");
+        ScopeStorage x;
+        if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red
+            scope = scope.lookup(node.predicate.name).scope;
+        x = (scope == rootScope) ? rootStorage : storage;
+        for (int i = 0; i < node.predicate.parameters.size(); i++) {
+            String string = (String) x.get(scope, node.predicate.name);
+            if (string!=null) string+=",";
+            else string = "";
+            string+=node.predicate.parameters.get(i).name;
+            x.set(scope, node.predicate.name, string);
         }
-        return node.contents();
+        return null;
     }
 
-    private String predicate (PredicateNode node) {
+    private Void predRule (PredicateRuleNode node) {
         //funcall
-        node.parameters.forEach(this::run);
-
-        Scope scope = reactor.get(node, "scope"); //todo identify with something else than node
-        ExpressionNode decl = reactor.get(node, "decl");
+        Scope scope = reactor.get(node, "scope");
+        DeclarationNode decl = reactor.get(node, "decl");
         ScopeStorage x;
-
-        if (decl instanceof PredicateNode)
-            scope = scope.lookup(node.name).scope; //todo wrong scope
-
+        if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red
+            scope = scope.lookup(node.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
+        x.set(scope, node.toString(), node);
 
-        for (int i = 0; i < node.parameters.size(); i++) {
-            String string = (String) x.get(scope, node.name);
-            if (string!=null)
-                string+=",";
-            else string = "";
-            string+=node.parameters.get(i).name;
-            x.set(scope, node.name, string);
+        String string = (String) x.get(scope, node.name);
+        if (string!=null) string+=",";
+        else string = "";
+        string+=node.toString();
+        x.set(scope, node.name, string);
+        return null;
+    }
+
+    private boolean query (BoolQueryNode node) { //copy-paste de reference
+        //TODO query atom : check dans les variables déclarées dans le scope actuel (+parent si pas automatique)
+        //TODO query fact : comme les aatoms MAIS avec le nom du predicate voir si l'atom se trouve dans le string
+        //TODO query rule : comme les facts MAIS le substring représente la variable qui contient vraiment la rule
+        //TODO fact/rule : ils sont mélangés pour l'instant
+        //TODO /!\ pour une rule il faut créer une nouveau scope et storage comme dans funCall puis le reset après
+        if (node.left instanceof ReferenceNode) {
+            Scope scope = reactor.get(node.left, "scope");
+            String name = ((ReferenceNode) node.left).name;
+            Object rvalue = get(node.right);
+            assign(scope, name, rvalue, reactor.get(node, "type"));
+            return (boolean) rvalue;
         }
 
-        return node.name + "[" + x.get(scope, node.name) + "]";
+        throw new Error("should not reach here");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -559,6 +583,13 @@ public final class Interpreter
     {
         Scope scope = reactor.get(node, "scope");
         assign(scope, node.name, get(node.initializer), reactor.get(node, "type"));
+        return null;
+    }
+
+    private Void atomDecl (AtomDeclarationNode node)
+    {
+        Scope scope = reactor.get(node, "scope");
+        assign(scope, node.atom.name, true, reactor.get(node, "type"));
         return null;
     }
 
