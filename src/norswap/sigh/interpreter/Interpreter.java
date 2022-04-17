@@ -167,11 +167,18 @@ public final class Interpreter
             scope = scope.lookup(node.predicate.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
         for (int i = 0; i < node.predicate.parameters.size(); i++) {
-            String string = (String) x.get(scope, node.predicate.name);
-            if (string!=null) string+=",";
-            else string = "";
-            string+=node.predicate.parameters.get(i).name;
-            x.set(scope, node.predicate.name, string);
+            Object[] list = (Object[]) x.get(scope, node.predicate.name);
+            if (list==null) list = new Object[0];
+            else {
+                for (Object o : list) {
+                    if (o.equals(node.predicate.parameters.get(i)))
+                        throw new IllegalArgumentException();
+                }
+            }
+            Object[] newList = new Object[list.length+1];
+            System.arraycopy(list, 0, newList, 0, list.length);
+            newList[newList.length-1] = node.predicate.parameters.get(i);
+            x.set(scope, node.predicate.name, newList);
         }
         return null;
     }
@@ -186,11 +193,19 @@ public final class Interpreter
         x = (scope == rootScope) ? rootStorage : storage;
         x.set(scope, node.toString(), node);
 
-        /*String string = (String) x.get(scope, node.name);
-        if (string!=null) string+=",";
-        else string = "";
-        string+=node.toString();
-        x.set(scope, node.name, string);
+        /*
+        Object[] list = (Object[]) x.get(scope, node.predicate.name);
+        if (list==null) list = new Object[0];
+        else {
+            for (Object o : list) {
+                if (o.equals(node.predicate.parameters.get(i)))
+                    throw new IllegalArgumentException();
+            }
+        }
+        Object[] newList = new Object[list.length+1];
+        System.arraycopy(list, 0, newList, 0, list.length);
+        newList[newList.length-1] = node.predicate.parameters.get(i);
+        x.set(scope, node.predicate.name, newList);
         */
         return null;
     }
@@ -214,14 +229,19 @@ public final class Interpreter
         } else if (node.right instanceof PredicateNode) {
             //check in predicate declarations
             ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
-            String toLook = (String) sto.get(scope, ((PredicateNode) node.right).name());
+            Object[] toLook = (Object[]) sto.get(scope, ((PredicateNode) node.right).name());
             if (toLook == null) { //the predicate (functor) had never been declared
                 assign(scope, name, false, reactor.get(node, "type"));
                 return false;
             }
             //we need to make sure that each of the atoms in node.right are represented
-            for (AtomLiteralNode atomNode : ((PredicateNode) node.right).parameters) {
-                if (!toLook.contains(atomNode.name)) {
+            for (ExpressionNode aNode : ((PredicateNode) node.right).parameters) {
+                boolean contained = false;
+                for (Object o : toLook) {
+                    if (o.equals(aNode))
+                        contained = true;
+                }
+                if (!contained) {
                     assign(scope, name, false, reactor.get(node, "type"));
                     return false;
                 }

@@ -7,7 +7,7 @@ import java.util.List;
 public class PredicateNode extends ExpressionNode
 {
     public final String name;
-    public final List<AtomLiteralNode> parameters;
+    public final List<ExpressionNode> parameters;
 
     @SuppressWarnings("unchecked")
     public PredicateNode

@@ -96,7 +96,7 @@ public class SighGrammar extends Grammar
     public rule atom_identifier =
         identifier(seq('_', alpha, id_part.at_least(0)))
             .push($ -> new AtomLiteralNode($.span(), $.str()));
-    
+
     // ==== SYNTACTIC =========================================================
     
     public rule reference = //should atom references be added here
@@ -116,9 +116,9 @@ public class SighGrammar extends Grammar
         this.atom_identifier.sep(0, COMMA)
             .as_list(AtomLiteralNode.class));
 
-    public rule predicate =
-        seq(identifier, LPAREN, atoms, RPAREN)
-        .push($ -> new PredicateNode($.span(), $.$[0], $.$[1]));
+    public rule predicate = lazy(() ->
+        seq(identifier, this.function_args)//todo LPAREN, atoms, RPAREN)
+            .push($ -> new PredicateNode($.span(), $.$[0], $.$[1])));
 
     public rule paren_expression = lazy(() ->
         seq(LPAREN, this.expression, RPAREN)
@@ -138,7 +138,7 @@ public class SighGrammar extends Grammar
         floating,
         integer,
         string,
-        //atom_identifier,
+        atom_identifier,//todo added for predicate facts
         //predicate,
         paren_expression,
         array);
