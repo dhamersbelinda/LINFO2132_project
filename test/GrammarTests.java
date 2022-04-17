@@ -128,6 +128,12 @@ public class GrammarTests extends AutumnTestFixture {
                         new ReferenceNode(null, "dog"),
                         asList(intlit(1)))
                 )));
+        successExpect("..boolean1 ?= true",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
+                ));
         //TODO think of more tests
     }
 

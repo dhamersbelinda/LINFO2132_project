@@ -181,34 +181,63 @@ public final class Interpreter
         Scope scope = reactor.get(node, "scope");
         DeclarationNode decl = reactor.get(node, "decl");
         ScopeStorage x;
-        if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red
+        if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red //why
             scope = scope.lookup(node.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
         x.set(scope, node.toString(), node);
 
-        String string = (String) x.get(scope, node.name);
+        /*String string = (String) x.get(scope, node.name);
         if (string!=null) string+=",";
         else string = "";
         string+=node.toString();
         x.set(scope, node.name, string);
+        */
         return null;
     }
 
-    private boolean query (BoolQueryNode node) { //copy-paste de reference
-        //TODO query atom : check dans les variables déclarées dans le scope actuel (+parent si pas automatique)
-        //TODO query fact : comme les aatoms MAIS avec le nom du predicate voir si l'atom se trouve dans le string
+    private boolean query (BoolQueryNode node) { //copy-paste de reference //can this not just be void?
+        //query atom : check dans les variables déclarées dans le scope actuel (+parent si pas automatique)
+        //query predicate fact : comme les aatoms MAIS avec le nom du predicate voir si l'atom se trouve dans le string
         //TODO query rule : comme les facts MAIS le substring représente la variable qui contient vraiment la rule
         //TODO fact/rule : ils sont mélangés pour l'instant
         //TODO /!\ pour une rule il faut créer une nouveau scope et storage comme dans funCall puis le reset après
-        /*if (node.left instanceof ReferenceNode) {
-            Scope scope = reactor.get(node.left, "scope");
-            String name = ((ReferenceNode) node.left).name;
-            Object rvalue = get(node.right);
-            assign(scope, name, rvalue, reactor.get(node, "type"));
-            return (boolean) rvalue;
-        }*/
 
-        throw new Error("should not reach here");
+        Scope scope = reactor.get(node.left, "scope");
+        String name = ((ReferenceNode) node.left).name;
+
+        if (node.right instanceof AtomLiteralNode) {
+            //need to check if present in declarations of scope -> look for existence of context
+            DeclarationContext ctx = scope.lookup(((AtomLiteralNode) node.right).name);
+            boolean check = ctx != null;
+            assign(scope, name, check, reactor.get(node, "type"));
+            return check;
+        } else if (node.right instanceof PredicateNode) {
+            //check in predicate declarations
+            ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
+            String toLook = (String) sto.get(scope, ((PredicateNode) node.right).name());
+            if (toLook == null) { //the predicate (functor) had never been declared
+                assign(scope, name, false, reactor.get(node, "type"));
+                return false;
+            }
+            //we need to make sure that each of the atoms in node.right are represented
+            for (AtomLiteralNode atomNode : ((PredicateNode) node.right).parameters) {
+                if (!toLook.contains(atomNode.name)) {
+                    assign(scope, name, false, reactor.get(node, "type"));
+                    return false;
+                }
+            }
+            assign(scope, name, true, reactor.get(node, "type"));
+            return true;
+            //TODO we need to do checks for expressed rules too
+        } else { //we have to evaluate a boolean expression (we have an expressionNode)
+            boolean endVal = (Boolean) this.run(node.right);
+            assign(scope, name, endVal, reactor.get(node, "type"));
+            return endVal;
+        }
+
+        //throw new Error("should not reach here");
+
+        //return false;
     }
 
     // ---------------------------------------------------------------------------------------------

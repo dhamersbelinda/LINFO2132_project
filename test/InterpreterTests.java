@@ -129,9 +129,18 @@ public final class InterpreterTests extends TestFixture {
         check(".._a", null);
         check(".._a; .._b",null);
         check(".._a; ..dog(_poodle)", null);
-        check("..dog(_poodle, _labrador); ..dog(_persian)",
-            null);
+        check("..dog(_poodle, _labrador); ..dog(_persian)", null);
         check("..dog(_poodle); ..dog(breed: Int) :- { return true }", null);
+        check("..dog(breed: Int) :- { return true }", null);
+        check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
+        check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
+        check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
+        check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
+        check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
+        check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);
+        check("var x: Bool = false; var y: Bool = true; ..x ?= y; return x;", true);
+        check("var x: Bool = false; var y: Bool = true; ..x ?= y || x; return x;", true);
+        check("var x: Bool = false; var y: Bool = true; ..x ?= y && x; return x;", false);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -257,6 +266,7 @@ public final class InterpreterTests extends TestFixture {
 
     @Test
     public void testCalls () {
+        rule = grammar.root;
         check(
             "fun add (a: Int, b: Int): Int { return a + b } " +
                 "return add(4, 7)",

@@ -185,7 +185,9 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
             "Trying to assign a non-compatible rvalue to a boolean lvalue.");
         //TODO don't know how to test the last error
         successInput("var x: Bool = false;\n ..x ?= dog(_poodle); x = true");
+        successInput("var x: Bool = false;\n ..x ?= true || false; x = false");
         successInput("var x: Bool = false;\n ..x ?= true; x = false");
+
         successInput("var x: Bool = false;\n ..x ?= _atomFact; x = false");
         successInput("..dog(_poodle); ..cat(breed: Int) :- { return true }");
     }
