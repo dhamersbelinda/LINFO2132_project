@@ -200,13 +200,13 @@ public final class Interpreter
         //TODO query rule : comme les facts MAIS le substring représente la variable qui contient vraiment la rule
         //TODO fact/rule : ils sont mélangés pour l'instant
         //TODO /!\ pour une rule il faut créer une nouveau scope et storage comme dans funCall puis le reset après
-        if (node.left instanceof ReferenceNode) {
+        /*if (node.left instanceof ReferenceNode) {
             Scope scope = reactor.get(node.left, "scope");
             String name = ((ReferenceNode) node.left).name;
             Object rvalue = get(node.right);
             assign(scope, name, rvalue, reactor.get(node, "type"));
             return (boolean) rvalue;
-        }
+        }*/
 
         throw new Error("should not reach here");
     }
