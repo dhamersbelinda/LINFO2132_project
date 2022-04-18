@@ -78,14 +78,12 @@ public class GrammarTests extends AutumnTestFixture {
                 new ReferenceNode(null, "dog"),
                 asList(atomlit("_poodle"), new ReferenceNode(null, "labrador"))
             ));*/
-        //failure("..dog(_poodle, labrador)");//todo now allowed
         /*successExpect(".dog(poodle)",
             new ExpressionStatementNode(null,
             new FunCallNode(null,
             new ReferenceNode(null, "dog"),
             asList(new ReferenceNode(null, "poodle"))
         )));*/ //not an atom
-        //failure("..dog(poodle)");//todo now allowed
         failure(".._dog(_poodle)"); //functor should not be an atom identifier
     }
 

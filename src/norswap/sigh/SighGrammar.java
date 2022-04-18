@@ -117,7 +117,7 @@ public class SighGrammar extends Grammar
             .as_list(AtomLiteralNode.class));
 
     public rule predicate = lazy(() ->
-        seq(identifier, this.function_args)//todo LPAREN, atoms, RPAREN)
+        seq(identifier, this.function_args)
             .push($ -> new PredicateNode($.span(), $.$[0], $.$[1])));
 
     public rule paren_expression = lazy(() ->

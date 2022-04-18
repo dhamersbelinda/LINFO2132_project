@@ -191,22 +191,22 @@ public final class Interpreter
         if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red //why
             scope = scope.lookup(node.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
-        x.set(scope, node.toString(), node);
+        //todo removed x.set(scope, node.toString(), node);
 
-        /*
-        Object[] list = (Object[]) x.get(scope, node.predicate.name);
+        //*
+        Object[] list = (Object[]) x.get(scope, node.name);
         if (list==null) list = new Object[0];
         else {
             for (Object o : list) {
-                if (o.equals(node.predicate.parameters.get(i)))
+                if (o.equals(node))
                     throw new IllegalArgumentException();
             }
         }
         Object[] newList = new Object[list.length+1];
         System.arraycopy(list, 0, newList, 0, list.length);
-        newList[newList.length-1] = node.predicate.parameters.get(i);
-        x.set(scope, node.predicate.name, newList);
-        */
+        newList[newList.length-1] = node;
+        x.set(scope, node.name, newList);
+        //*/
         return null;
     }
 
@@ -238,8 +238,14 @@ public final class Interpreter
             for (ExpressionNode aNode : ((PredicateNode) node.right).parameters) {
                 boolean contained = false;
                 for (Object o : toLook) {
-                    if (o.equals(aNode))
+                    if (o instanceof AtomLiteralNode && o.equals(aNode)) {
                         contained = true;
+                        break;
+                    } else if (o instanceof PredicateRuleNode) {
+                        //todo run PredicateRuleNode
+                        //todo use try catch as some signatures wont meet the requirements and it should crash for that
+                    } else throw new Error("should not reach here");
+
                 }
                 if (!contained) {
                     assign(scope, name, false, reactor.get(node, "type"));
@@ -248,7 +254,6 @@ public final class Interpreter
             }
             assign(scope, name, true, reactor.get(node, "type"));
             return true;
-            //TODO we need to do checks for expressed rules too
         } else { //we have to evaluate a boolean expression (we have an expressionNode)
             boolean endVal = (Boolean) this.run(node.right);
             assign(scope, name, endVal, reactor.get(node, "type"));

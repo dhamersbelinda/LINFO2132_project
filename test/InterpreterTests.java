@@ -126,6 +126,7 @@ public final class InterpreterTests extends TestFixture {
     @Test
     public void x () {
         rule = grammar.root;
+        check("var x: Bool = false; ..dog(y: Int) :- { return true }; ..x ?= dog(_poodle); return x;", true);
         check(".._a", null);
         check(".._a; .._b",null);
         check(".._a; ..dog(_poodle)", null);
@@ -135,7 +136,7 @@ public final class InterpreterTests extends TestFixture {
         check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
         check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
         check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
-        check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);//todo new
+        check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);//!!!!!!!!!!
         check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
         check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
         check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);

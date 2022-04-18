@@ -414,7 +414,7 @@ public final class SemanticAnalysis
 
     private void predicateDecl (PredicateDeclarationNode node) {
         final Scope scope_ref = this.scope;
-        DeclarationContext maybeCtx = scope_ref.lookup(node.predicate.name()); //!!!!
+        DeclarationContext maybeCtx = scope_ref.lookup(node.predicate.name());
         System.out.println(node.contents());
 
         if (maybeCtx != null) {
@@ -427,18 +427,18 @@ public final class SemanticAnalysis
             return;
         }
 
-        scope.declare(node.predicate.name(), node); //!!!!
+        scope.declare(node.predicate.name(), node);
         R.set(node, "scope", scope);
-        //R.set(node, "type", PredicateType.INSTANCE); //!!!!
+        //R.set(node, "type", PredicateType.INSTANCE);
 
-        Attribute[] dependencies = new Attribute[node.predicate.parameters.size()]; //!!!!
-        forEachIndexed(node.predicate.parameters, (i, param) -> //!!!!
+        Attribute[] dependencies = new Attribute[node.predicate.parameters.size()];
+        forEachIndexed(node.predicate.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
         R.rule(node, "type")
             .using(dependencies)
             .by(r -> {
-                Type[] paramTypes = new Type[node.predicate.parameters.size()]; //!!!!
+                Type[] paramTypes = new Type[node.predicate.parameters.size()];
                 for (int i = 0; i < paramTypes.length; ++i)
                     paramTypes[i] = r.get(i);
                 r.set(0, new FunType(r.get(0), paramTypes));
@@ -449,7 +449,7 @@ public final class SemanticAnalysis
     private void predicateRule (PredicateRuleNode node)
     {
         final Scope scope_ref = this.scope;
-        DeclarationContext maybeCtx = scope_ref.lookup(node.name()); //!!!!
+        DeclarationContext maybeCtx = scope_ref.lookup(node.name());
         System.out.println(node.contents());
 
         if (maybeCtx != null) {
@@ -462,9 +462,9 @@ public final class SemanticAnalysis
             return;
         }
 
-        scope.declare(node.name(), node); //!!!!
+        scope.declare(node.name(), node);
         R.set(node, "scope", scope);
-        //R.set(node, "type", PredicateType.INSTANCE); //!!!!
+        //R.set(node, "type", PredicateType.INSTANCE);
 
         //scope = new Scope(node, scope);
         //R.set(node, "scope", scope);
