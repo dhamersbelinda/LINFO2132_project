@@ -12,10 +12,9 @@ import norswap.utils.Util;
 import norswap.utils.exceptions.Exceptions;
 import norswap.utils.exceptions.NoStackException;
 import norswap.utils.visitors.ValuedVisitor;
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 import static norswap.utils.Util.cast;
@@ -210,12 +209,7 @@ public final class Interpreter
         return null;
     }
 
-    private boolean query (BoolQueryNode node) { //copy-paste de reference //can this not just be void?
-        //query atom : check dans les variables déclarées dans le scope actuel (+parent si pas automatique)
-        //query predicate fact : comme les aatoms MAIS avec le nom du predicate voir si l'atom se trouve dans le string
-        //TODO query rule : comme les facts MAIS le substring représente la variable qui contient vraiment la rule
-        //TODO fact/rule : ils sont mélangés pour l'instant
-        //TODO /!\ pour une rule il faut créer une nouveau scope et storage comme dans funCall puis le reset après
+    private boolean query (BoolQueryNode node) {
 
         Scope scope = reactor.get(node.left, "scope");
         String name = ((ReferenceNode) node.left).name;
@@ -229,35 +223,78 @@ public final class Interpreter
         } else if (node.right instanceof PredicateNode) {
             //check in predicate declarations
             ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
-            Object[] toLook = (Object[]) sto.get(scope, ((PredicateNode) node.right).name());
+            Object toLook = sto.get(scope, ((PredicateNode) node.right).name()); //Object[] or PredicateRuleNode
             if (toLook == null) { //the predicate (functor) had never been declared
                 assign(scope, name, false, reactor.get(node, "type"));
                 return false;
             }
             //we need to make sure that each of the atoms in node.right are represented
-            for (ExpressionNode aNode : ((PredicateNode) node.right).parameters) {
-                boolean contained = false;
-                for (Object o : toLook) {
-                    if (o instanceof AtomLiteralNode || o instanceof IntLiteralNode
-                        || o instanceof StringLiteralNode || o instanceof FloatLiteralNode) {
-                        if (o.equals(aNode)) {
+            if (!(toLook instanceof PredicateRuleNode)) {
+                Object[] toLookPrim = (Object[]) toLook;
+                for (AtomLiteralNode atomNode : ((PredicateNode) node.right).parameters) {
+                    boolean contained = false;
+                    for (Object o : toLookPrim) {
+                        if (o.equals(atomNode))
                             contained = true;
+                    }
+                    if (!contained) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        return false;
+                    }
+                }
+                assign(scope, name, true, reactor.get(node, "type"));
+                return true;
+            }
+            //we have a rule
+            //we check the existence of the pred -> would give a string
+            Object[] toLook2 = (Object[]) sto.get(scope, ((PredicateRuleNode) toLook).pred);
+            if (toLook2 == null) { //the predicate (functor) had never been declared
+                assign(scope, name, false, reactor.get(node, "type"));
+                return false;
+            }
+            List<AtomLiteralNode> given_args = ((PredicateNode) node.right).parameters;
+            List<ParameterNode> params = ((PredicateRuleNode) toLook).parameters;
+            List<ExpressionNode> args = ((PredicateRuleNode) toLook).args;
+            //sizes are not the same
+            if (given_args.size() != params.size()) {
+                assign(scope, name, false, reactor.get(node, "type"));
+                //maybe give an error message here instead?
+                return false;
+            }
+            for (ExpressionNode arg : args) {
+                if (arg instanceof AtomLiteralNode) {
+                    boolean contained = false;
+                    for (Object o : toLook2) {
+                        if (o.equals(arg))
+                            contained = true;
+                    }
+                    if (!contained) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        return false;
+                    }
+                } else if (arg instanceof ReferenceNode) {
+                    //find reference position in params
+                    int pos = -1;
+                    for (ParameterNode param : params) {
+                        if (((ReferenceNode) arg).name.equals(param.name())) {
+                            pos = params.indexOf(param);
                             break;
                         }
-                    } else if (o instanceof PredicateRuleNode) {
-                        //todo run PredicateRuleNode
-                        //todo use try catch as some signatures wont meet the requirements and it should crash for that
-                        for (ParameterNode parameter : ((PredicateRuleNode) o).parameters) {
-                            if (comparePredicateParameter(parameter, aNode, scope)) {
-                                break;
-                            }
-                        }
-                    } else throw new Error("should not reach here");
-
-                }
-                if (!contained) {
-                    assign(scope, name, false, reactor.get(node, "type"));
-                    return false;
+                    }
+                    if (pos == -1) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        return false;
+                    }
+                    AtomLiteralNode given_arg = given_args.get(pos);
+                    boolean contained = false;
+                    for (Object o : toLook2) {
+                        if (o.equals(given_arg))
+                            contained = true;
+                    }
+                    if (!contained) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        return false;
+                    }
                 }
             }
             assign(scope, name, true, reactor.get(node, "type"));
@@ -267,10 +304,6 @@ public final class Interpreter
             assign(scope, name, endVal, reactor.get(node, "type"));
             return endVal;
         }
-
-        //throw new Error("should not reach here");
-
-        //return false;
     }
 
     // ---------------------------------------------------------------------------------------------
