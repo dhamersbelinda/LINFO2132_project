@@ -238,12 +238,20 @@ public final class Interpreter
             for (ExpressionNode aNode : ((PredicateNode) node.right).parameters) {
                 boolean contained = false;
                 for (Object o : toLook) {
-                    if (o instanceof AtomLiteralNode && o.equals(aNode)) {
-                        contained = true;
-                        break;
+                    if (o instanceof AtomLiteralNode || o instanceof IntLiteralNode
+                        || o instanceof StringLiteralNode || o instanceof FloatLiteralNode) {
+                        if (o.equals(aNode)) {
+                            contained = true;
+                            break;
+                        }
                     } else if (o instanceof PredicateRuleNode) {
                         //todo run PredicateRuleNode
                         //todo use try catch as some signatures wont meet the requirements and it should crash for that
+                        for (ParameterNode parameter : ((PredicateRuleNode) o).parameters) {
+                            if (comparePredicateParameter(parameter, aNode, scope)) {
+                                break;
+                            }
+                        }
                     } else throw new Error("should not reach here");
 
                 }
@@ -557,6 +565,18 @@ public final class Interpreter
         String out = convertToString(args[0]);
         System.out.println(out);
         return out;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+
+    private boolean comparePredicateParameter(ParameterNode parameter, ExpressionNode aNode, Scope scope)
+    {
+        String type = ((SimpleTypeNode) parameter.type).name;
+        Object object = reactor.get(aNode, "type");
+        return (type.equals("Bool") && object instanceof BoolType)
+            || (type.equals("Int") && object instanceof IntType)
+            || (type.equals("String") && object instanceof StringType)
+            || (type.equals("Float") && object instanceof FloatType);
     }
 
     // ---------------------------------------------------------------------------------------------
