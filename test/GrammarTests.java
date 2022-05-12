@@ -95,7 +95,7 @@ public class GrammarTests extends AutumnTestFixture {
                 new ReferenceNode(null, "boolean1"),
                 new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
             ));*/
-        failure("..boolean1 ?= 1 + 2");
+        success("..boolean1 ?= 1 + 2");
         successExpect("..boolean1 ?= _atomFact",
             new ExpressionStatementNode(null,
             new BoolQueryNode(null,
@@ -147,7 +147,7 @@ public class GrammarTests extends AutumnTestFixture {
                                 new ReferenceNode(null, "boolean1"),
                                 new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
                 ));*/
-        failure("..boolean1 ?= true");
+        success("..boolean1 ?= true");
         //TODO think of more tests
     }
 
