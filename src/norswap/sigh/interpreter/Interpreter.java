@@ -1,5 +1,6 @@
 package norswap.sigh.interpreter;
 
+import norswap.sigh.SemanticAnalysis;
 import norswap.sigh.ast.*;
 import norswap.sigh.scopes.DeclarationContext;
 import norswap.sigh.scopes.DeclarationKind;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static norswap.utils.Util.cast;
 import static norswap.utils.Vanilla.coIterate;
 import static norswap.utils.Vanilla.map;
@@ -295,6 +297,13 @@ public final class Interpreter
                     }
                     //deduce value from given_args
                     Object given_arg = given_args.get(pos);
+                    Type given_arg_type = reactor.get(given_arg, "type");
+                    Type param_type = reactor.get(params.get(pos), "type");
+                    if (!isAssignableTo(param_type, given_arg_type)) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
+                        //return false; //TODO put exception here
+                    }
                     Object r2 = get((SighNode) given_arg);
                     boolean contained = false;
                     for (Object o : toLook2) {
@@ -739,4 +748,18 @@ public final class Interpreter
     }
 
     // ---------------------------------------------------------------------------------------------
+    private static boolean isAssignableTo (Type a, Type b)
+    {
+        if (a instanceof VoidType || b instanceof VoidType)
+            return false;
+
+        if (a instanceof IntType && b instanceof FloatType)
+            return true;
+
+        if (a instanceof ArrayType)
+            return b instanceof ArrayType
+                    && isAssignableTo(((ArrayType)a).componentType, ((ArrayType)b).componentType);
+
+        return a instanceof NullType && b.isReference() || a.equals(b);
+    }
 }

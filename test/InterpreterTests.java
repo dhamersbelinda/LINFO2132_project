@@ -7,6 +7,7 @@ import norswap.sigh.SemanticAnalysis;
 import norswap.sigh.SighGrammar;
 import norswap.sigh.ast.SighNode;
 import norswap.sigh.interpreter.Interpreter;
+import norswap.sigh.interpreter.InterpreterException;
 import norswap.sigh.interpreter.Null;
 import norswap.uranium.Reactor;
 import norswap.uranium.SemanticError;
@@ -240,14 +241,38 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(_atom)"+
                 "..x ?= dog(1, _atom);" +
                 " return x;", true);
-        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+        checkThrows("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
                 "var x: Bool = true; "+
                 "var i: Int = 1; "+
                 "..cat(_atomic)"+
                 "..cat(1)"+
                 "..cat(_atom)"+
                 "..x ?= dog(1, i);" +
+                " return x;", InterpreterException.class); //TODO should be false
+        checkThrows("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(2, i);" +
+                " return x;", InterpreterException.class);
+        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(i, _atom);" +
                 " return x;", true);
+        checkThrows("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(_atomic, _atom);" +
+                " return x;", InterpreterException.class);
 
     }
 
