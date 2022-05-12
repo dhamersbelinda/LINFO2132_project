@@ -103,7 +103,6 @@ public class SighGrammar extends Grammar
         identifier
         .push($ -> new ReferenceNode($.span(), $.$[0]));
 
-
     public rule constructor =
         seq(DOLLAR, reference)
         .push($ -> new ConstructorNode($.span(), $.$[0]));
@@ -111,10 +110,6 @@ public class SighGrammar extends Grammar
     public rule simple_type =
         identifier
         .push($ -> new SimpleTypeNode($.span(), $.$[0]));
-
-    public rule atoms = lazy(() ->
-        this.atom_identifier.sep(0, COMMA)
-            .as_list(AtomLiteralNode.class));
 
     public rule predicate = lazy(() ->
         seq(identifier, this.function_args)
@@ -207,21 +202,12 @@ public class SighGrammar extends Grammar
         .infix(EQUALS,
             $ -> new AssignmentNode($.span(), $.$[0], $.$[1]));
 
-    /*public rule bool_query = seq(DOT, right_expression()
-        .operand(choice(atom_identifier, predicate, or_expression)) //TODO needs to be replaced with comb
-        .infix(BOOL_QUERY,
-            $ -> new BoolQueryNode($.span(), $.$[0], $.$[1])));*/
-
     public rule bool_query = seq(
         DOT_DOT,
         reference,
         BOOL_QUERY,
         choice(atom_identifier, predicate, or_expression)
         ).push($ -> new BoolQueryNode($.span(), $.$[0], $.$[1]));
-
-    //public rule logic_expression =
-        //seq(DOT, choice(atom_identifier, predicate))
-            //.push($ -> new LogicNode($.span(), $.$[0]));
 
     public rule atom_decl =
         seq( DOT_DOT, atom_identifier)
@@ -238,7 +224,7 @@ public class SighGrammar extends Grammar
             this.parameters,
             RPAREN,
             TURNSTILE,
-            this.block) //TODO do we really need the block with the braces?
+            predicate) //TODO do we really need the block with the braces?
             .push($ -> new PredicateRuleNode($.span(), $.$[0], $.$[1], $.$[2])));
 
     public rule expression = //faut rien changer ici non?
@@ -273,10 +259,6 @@ public class SighGrammar extends Grammar
         this.block,
         this.var_decl,
         this.fun_decl,
-        //this.atom_decl,
-        //this.predicate_decl,
-
-        //this.logic_expression,
         this.struct_decl,
         this.if_stmt,
         this.while_stmt,

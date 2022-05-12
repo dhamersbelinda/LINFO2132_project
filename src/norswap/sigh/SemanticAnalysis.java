@@ -435,7 +435,7 @@ public final class SemanticAnalysis
         forEachIndexed(node.predicate.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
-        R.rule(node, "type")
+        R.rule(node, "type") //TODO don't know if this is relevant
             .using(dependencies)
             .by(r -> {
                 Type[] paramTypes = new Type[node.predicate.parameters.size()];
@@ -450,7 +450,7 @@ public final class SemanticAnalysis
     {
         final Scope scope_ref = this.scope;
         DeclarationContext maybeCtx = scope_ref.lookup(node.name());
-        System.out.println(node.contents());
+        //System.out.println(node.contents());
 
         if (maybeCtx != null) {
             R.set(node, "decl",  maybeCtx.declaration);
@@ -463,33 +463,37 @@ public final class SemanticAnalysis
         }
 
         scope.declare(node.name(), node);
-        R.set(node, "scope", scope);
-        //R.set(node, "type", PredicateType.INSTANCE);
-
         //scope = new Scope(node, scope);
-        //R.set(node, "scope", scope);
+        R.set(node, "scope", scope);
 
-        Attribute[] dependencies = new Attribute[node.parameters.size()];
+
+        /*Attribute[] dependencies = new Attribute[node.parameters.size()];
         forEachIndexed(node.parameters, (i, param) ->
-            dependencies[i] = param.attr("type"));
+            dependencies[i] = param.attr("type"));*/
 
-        R.rule(node, "type")
+        R.set(node, "type", node.getClass());
+
+        //n'a pas l'air d'être utile pcq paramTypes n'est utilisé nulle part et
+        //l'attribut 0 de la rule est déjà set avant
+        /*R.rule(node, "type")
             .using(dependencies)
             .by (r -> {
                 Type[] paramTypes = new Type[node.parameters.size()];
                 for (int i = 0; i < paramTypes.length; ++i)
                     paramTypes[i] = r.get(i);
                 r.set(0, new FunType(BoolType.INSTANCE, paramTypes));
-            });
+            });*/
 
-        R.rule()
-            .using(node.block.attr("returns"))
+        //une predicate rule ne retourne rien à priori
+        /*R.rule()
+            .using(node.predicate.attr("returns"))
             .by(r -> {
                 boolean returns = r.get(0);
                 if (!returns)
                     r.error("Missing return in function.", node);
                 // NOTE: The returned value presence & type is checked in returnStmt().
-            });
+            });*/
+
     }
     // ---------------------------------------------------------------------------------------------
 
@@ -704,8 +708,7 @@ public final class SemanticAnalysis
                     ||  node.left instanceof FieldAccessNode
                     ||  node.left instanceof ArrayAccessNode) {
                     if (!((node.right instanceof PredicateNode) //TODO change to more general expressions
-                        || (node.right instanceof AtomLiteralNode) //same
-                        || (right.equals(BoolType.INSTANCE)))) //TODO dunno if this is right
+                        || (node.right instanceof AtomLiteralNode))) //same))) //TODO dunno if this is right
                         r.errorFor("Trying to assign a non-compatible rvalue to a boolean lvalue.", node);
                 }
                 else

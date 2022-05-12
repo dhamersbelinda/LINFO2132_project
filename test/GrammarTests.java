@@ -59,7 +59,7 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect(".._a", new AtomDeclarationNode(null, new AtomLiteralNode(null, "_a")));
         successExpect(".._atomFact", new AtomDeclarationNode(null, atomlit("_atomFact")));
         failure(".._"); //anonymous variable should only be used for unification
-        //failure("_atomFact"); //needs a DOT
+        failure("_atomFact"); //needs two DOTS
 
         successExpect("..dog(_poodle)",
             new PredicateDeclarationNode(null,
@@ -73,29 +73,29 @@ public class GrammarTests extends AutumnTestFixture {
             new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                         "dog", asList(atomlit("_poodle"), atomlit("_labrador")))));
-        /*successExpect(".dog(_poodle, labrador)", //TODO this test should allow this to be parsed, but we need to check that there are no atoms in funcall
-            new FunCallNode(null,
-                new ReferenceNode(null, "dog"),
-                asList(atomlit("_poodle"), new ReferenceNode(null, "labrador"))
-            ));*/
-        /*successExpect(".dog(poodle)",
-            new ExpressionStatementNode(null,
-            new FunCallNode(null,
-            new ReferenceNode(null, "dog"),
-            asList(new ReferenceNode(null, "poodle"))
-        )));*/ //not an atom
+        successExpect("..dog(_poodle, labrador)", //TODO this test should allow this to be parsed, but we need to check that there are no atoms in funcall
+            new PredicateDeclarationNode(null,
+                new PredicateNode(null, "dog", asList(atomlit("_poodle"), new ReferenceNode(null, "labrador"))
+            )));
+        successExpect("..dog(poodle)",
+                new PredicateDeclarationNode(null,
+                        new PredicateNode(null, "dog",
+                                asList(
+                                new ReferenceNode(null, "poodle")))
+                ));
         failure(".._dog(_poodle)"); //functor should not be an atom identifier
     }
 
     @Test
     public void boolqueries () {
         rule = grammar.expression_stmt;
-        successExpect("..boolean1 ?= 1 + 2",
+        /*successExpect("..boolean1 ?= 1 + 2",
             new ExpressionStatementNode(null,
             new BoolQueryNode(null,
                 new ReferenceNode(null, "boolean1"),
                 new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
-            ));
+            ));*/
+        failure("..boolean1 ?= 1 + 2");
         successExpect("..boolean1 ?= _atomFact",
             new ExpressionStatementNode(null,
             new BoolQueryNode(null,
@@ -107,7 +107,7 @@ public class GrammarTests extends AutumnTestFixture {
             new BoolQueryNode(null,
                 new ReferenceNode(null, "boolean1"),
                 new PredicateNode(null, "dog",
-                    Arrays.asList(new AtomLiteralNode(null, "_poodle"))
+                    asList(new AtomLiteralNode(null, "_poodle"))
                 ))
         ));
         failure("..boolean1 ?= dog(_poodle) + 1");
@@ -126,36 +126,48 @@ public class GrammarTests extends AutumnTestFixture {
             new ExpressionStatementNode(null,
                 new BoolQueryNode(null,
                     new ReferenceNode(null, "boolean1"),
-                    new FunCallNode(null,
-                        new ReferenceNode(null, "dog"),
+                    new PredicateNode(null,
+                        "dog",
                         asList(intlit(1)))
                 )));
+        successExpect("..boolean1 ?= dog(cat(1))",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new PredicateNode(null,
+                                        "dog",
+                                        asList(new FunCallNode(null,
+                                                new ReferenceNode(null, "cat"),
+                                                asList(intlit(1))))
+                        ))));
+        /*
         successExpect("..boolean1 ?= true",
                 new ExpressionStatementNode(null,
                         new BoolQueryNode(null,
                                 new ReferenceNode(null, "boolean1"),
                                 new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
-                ));
+                ));*/
+        failure("..boolean1 ?= true");
         //TODO think of more tests
     }
 
     @Test
     public void predicate_rules () {
         rule = grammar.statement;
-        successExpect("..cat(breed: Int) :- { return true }",
+        successExpect("..cat(breed: Int) :- dog(breed)",
             new PredicateRuleNode(null,
                 "cat",
                 asList(new ParameterNode(null,
                     "breed",
                     new SimpleTypeNode(null,
                         "Int"))),
-                new BlockNode(null,
-                    asList(new ReturnNode(null,
-                        new ReferenceNode(null,
-                            "true"))))
-            ));
-        failure("..cat(breed) :- { return true }"); // not parameter
-        failure("..cat(breed: Int) :- true"); //TODO
+                new PredicateNode(null,
+                    "dog",
+                    asList(new ReferenceNode(null,
+                            "breed"))))
+            );
+        failure("..cat(breed) :- { return true }"); // not right structure
+        failure("..cat(breed: Int) :- true"); //TODO not (yet) a predicate
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import norswap.utils.visitors.ValuedVisitor;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static norswap.utils.Util.cast;
@@ -192,7 +193,7 @@ public final class Interpreter
         x = (scope == rootScope) ? rootStorage : storage;
         //todo removed x.set(scope, node.toString(), node);
 
-        //*
+        /*
         Object[] list = (Object[]) x.get(scope, node.name);
         if (list==null) list = new Object[0];
         else {
@@ -205,7 +206,8 @@ public final class Interpreter
         System.arraycopy(list, 0, newList, 0, list.length);
         newList[newList.length-1] = node;
         x.set(scope, node.name, newList);
-        //*/
+        */
+        x.set(scope, node.name, node);
         return null;
     }
 
@@ -231,7 +233,7 @@ public final class Interpreter
             //we need to make sure that each of the atoms in node.right are represented
             if (!(toLook instanceof PredicateRuleNode)) {
                 Object[] toLookPrim = (Object[]) toLook;
-                for (AtomLiteralNode atomNode : ((PredicateNode) node.right).parameters) {
+                for (ExpressionNode atomNode : ((PredicateNode) node.right).parameters) {
                     boolean contained = false;
                     for (Object o : toLookPrim) {
                         if (o.equals(atomNode))
@@ -247,33 +249,23 @@ public final class Interpreter
             }
             //we have a rule
             //we check the existence of the pred -> would give a string
-            Object[] toLook2 = (Object[]) sto.get(scope, ((PredicateRuleNode) toLook).pred);
+            Object[] toLook2 = (Object[]) sto.get(scope, ((PredicateRuleNode) toLook).predicate.name());
             if (toLook2 == null) { //the predicate (functor) had never been declared
                 assign(scope, name, false, reactor.get(node, "type"));
                 return false;
             }
-            List<AtomLiteralNode> given_args = ((PredicateNode) node.right).parameters;
+            List<ExpressionNode> given_args = ((PredicateNode) node.right).parameters;
             List<ParameterNode> params = ((PredicateRuleNode) toLook).parameters;
-            List<ExpressionNode> args = ((PredicateRuleNode) toLook).args;
+            List<ExpressionNode> args = (((PredicateRuleNode) toLook).predicate).parameters;
             //sizes are not the same
             if (given_args.size() != params.size()) {
                 assign(scope, name, false, reactor.get(node, "type"));
                 //maybe give an error message here instead?
                 return false;
             }
+
             for (ExpressionNode arg : args) {
-                if (arg instanceof AtomLiteralNode) {
-                    boolean contained = false;
-                    for (Object o : toLook2) {
-                        if (o.equals(arg))
-                            contained = true;
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-                } else if (arg instanceof ReferenceNode) {
-                    //find reference position in params
+                if (arg instanceof ReferenceNode) { //we need to find value
                     int pos = -1;
                     for (ParameterNode param : params) {
                         if (((ReferenceNode) arg).name.equals(param.name())) {
@@ -281,14 +273,48 @@ public final class Interpreter
                             break;
                         }
                     }
+                    //deduce value from outer scope
                     if (pos == -1) {
+                        //find value
+                        Object r = get(arg); //exception here if not found
+                        boolean contained = false;
+                        for (Object o : toLook2) {
+                            Object r1 = get((SighNode) o);
+                            if (r1.equals(r)) {
+                                contained = true;
+                                break;
+                            }
+                        }
+                        if (!contained) {
+                            assign(scope, name, false, reactor.get(node, "type"));
+                            return false;
+                        }
+                        //if not found -> shouldn't be reached
                         assign(scope, name, false, reactor.get(node, "type"));
                         return false;
                     }
-                    AtomLiteralNode given_arg = given_args.get(pos);
+                    //deduce value from given_args
+                    Object given_arg = given_args.get(pos);
+                    Object r2 = get((SighNode) given_arg);
                     boolean contained = false;
                     for (Object o : toLook2) {
-                        if (o.equals(given_arg))
+                        Object r1 = get((SighNode) o);
+                        if (r1.equals(r2)) {
+                            contained = true;
+                            break;
+                        }
+                    }
+                    if (!contained) {
+                        assign(scope, name, false, reactor.get(node, "type"));
+                        return false;
+                    }
+
+                } else { //we have its value
+                    Object r1 = get(arg);
+                    boolean contained = false;
+                    for (Object o : toLook2) {
+                        Object r2 = get((SighNode) o);
+                        if (r1.equals(r2)) //comparing values
                             contained = true;
                     }
                     if (!contained) {
@@ -304,6 +330,8 @@ public final class Interpreter
             assign(scope, name, endVal, reactor.get(node, "type"));
             return endVal;
         }
+
+        //return true;
     }
 
     // ---------------------------------------------------------------------------------------------

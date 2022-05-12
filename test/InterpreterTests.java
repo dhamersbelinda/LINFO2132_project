@@ -124,28 +124,131 @@ public final class InterpreterTests extends TestFixture {
     }
 
     @Test
-    public void x () {
+    public void testLogicFacts () {
         rule = grammar.root;
         //check("var x: Bool = false; ..dog(y: Int) :- { return true }; ..x ?= dog(_poodle); return x;", false);
         //check("var a: Int = 1; var x: Bool = false; fun dog (a: Bool): Bool { return a }; ..x ?= dog(a); return x;", false);
-        check("var a: Int = 1; var x: Bool = false; fun xxx (a: Int): Int { return a }; ..dog(y: Bool) :- { return true }; ..x ?= xxx(a); return x;", false);
+        //check("var a: Int = 1; var x: Bool = false; fun xxx (a: Int): Int { return a }; ..dog(y: Bool) :- { return true }; ..x ?= xxx(a); return x;", false);
 
         check(".._a", null);
         check(".._a; .._b",null);
         check(".._a; ..dog(_poodle)", null);
         check("..dog(_poodle, _labrador); ..dog(_persian)", null);
-        check("..dog(_poodle); ..dog(breed: Int) :- { return true }", null);
-        check("..dog(breed: Atom) :- { return true }", null);
+    }
+
+    @Test
+    public void testBoolQueries () {
+        rule = grammar.root;
         check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
         check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
         check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
         check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);//!!!!!!!!!!
         check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
         check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
-        check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);
+        /*check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);
         check("var x: Bool = false; var y: Bool = true; ..x ?= y; return x;", true);
         check("var x: Bool = false; var y: Bool = true; ..x ?= y || x; return x;", true);
-        check("var x: Bool = false; var y: Bool = true; ..x ?= y && x; return x;", false);
+        check("var x: Bool = false; var y: Bool = true; ..x ?= y && x; return x;", false);*/
+    }
+
+    @Test
+    public void predicateRuleTests () {
+        rule = grammar.root;
+
+        check("..dog(breed: Atom) :- cat(breed);", null);
+        check("..dog(breed: Atom) :- cat(breed);" +
+                "var x: Bool = true; "+
+                "..x ?= dog(_atomic);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- cat(breed);" +
+                "var x: Bool = true; "+
+                "..x ?= cat(_atomic);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- cat(breed);" +
+                "var x: Bool = false; "+
+                "..cat(_atomic)"+
+                "..x ?= dog(_atomic);" +
+                " return x;", true);
+
+        check("..dog(breed: Atom) :- cat(breed);" +
+                "var x: Bool = true; "+
+                "..cat(_atomic)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- cat(breed);" +
+                "var x: Bool = false; "+
+                "..cat(_atomic)"+
+                "..x ?= cat(_atomic);" +
+                " return x;", true);
+        check("..dog(breed: Atom) :- cat(breed, _atomic);" +
+                "var x: Bool = false; "+
+                "..cat(_atomic)"+
+                "..cat(_atomical)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", true);
+        check("..dog(breed: Atom) :- cat(breed, _atomic);" +
+                "var x: Bool = true; "+
+                "..cat(_atomical)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- cat(breed, _siamese);" +
+                "var x: Bool = true; "+
+                "..cat(_atomical)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- cat(breed, _siamese);" +
+                "var x: Bool = false; "+
+                "..cat(_atomical)"+
+                "..cat(_siamese)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", true);
+        check("..dog(breed: Atom) :- cat(breed, _atomic);" +
+                "var x: Bool = true; "+
+                "..cat(_atomic)"+
+                "..x ?= dog(_atomical);" +
+                " return x;", false);
+        check("..dog(breed: Atom, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "..cat(_atomic)"+
+                "..x ?= dog(_atomical, _atom);" +
+                " return x;", false);
+        check("..dog(breed: Atom, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = false; "+
+                "..cat(_atomic)"+
+                "..cat(_atomical)"+
+                "..cat(_atom)"+
+                "..x ?= dog(_atomical, _atom);" +
+                " return x;", true);
+        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(1, _atom);" +
+                " return x;", true);
+        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "..cat(_atomic)"+
+                "..cat(_atom)"+
+                "..x ?= dog(1, _atom);" +
+                " return x;", false);
+        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(i)"+
+                "..cat(_atom)"+
+                "..x ?= dog(1, _atom);" +
+                " return x;", true);
+        check("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(1, i);" +
+                " return x;", true);
+
     }
 
     // ---------------------------------------------------------------------------------------------
