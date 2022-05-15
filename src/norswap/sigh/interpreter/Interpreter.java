@@ -16,6 +16,7 @@ import norswap.utils.visitors.ValuedVisitor;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Map;
 
@@ -214,6 +215,32 @@ public final class Interpreter
         //todo run arguments 1 by 1 and assign values for each missing value
         //todo throw error if 2 values not initialised
         //todo throw error if 2 values incompatible types
+
+        if (!node.left.name.equals(node.right.name))
+            throw new InputMismatchException("Left expression and right expression don't use the same decleration");
+
+        if (node.left.parameters.size() != node.right.parameters.size())
+            throw new InputMismatchException("Left expression and right expression don't have matching signatures");
+
+        for (int i=0; i<node.left.parameters.size(); i++) {
+            SighNode left = node.left.parameters.get(i).arg;
+            SighNode right = node.right.parameters.get(i).arg;
+            Type leftT = reactor.get(left, "type");
+            Type rightT = reactor.get(right, "type");
+
+            if (left instanceof ParameterNode && right instanceof ParameterNode)
+                throw new IllegalArgumentException("Arguments can't both be ParameterNode");
+
+            if (leftT != rightT)
+                throw new InputMismatchException("Arguments don't have the same types");
+
+            if (left instanceof ParameterNode) {
+                assign(rootScope, ((ParameterNode) left).name, get(right), leftT);
+            } else if (right instanceof ParameterNode) {
+                assign(rootScope, ((ParameterNode) right).name, get(left), rightT);
+                storage.get(rootScope, ((ParameterNode) right).name);
+            }
+        }
         return null;
     }
 

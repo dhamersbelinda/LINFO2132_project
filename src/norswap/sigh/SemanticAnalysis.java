@@ -553,48 +553,22 @@ public final class SemanticAnalysis
     private void unification (UnificationNode node) {
         this.inferenceContext = node;
 
-        int min = Math.min(node.left.parameters.size(), node.right.parameters.size());
-
-        Attribute[] dependencies = new Attribute[node.left.parameters.size() + node.right.parameters.size()];
-        for (int i=0; i<min; i+=2) {
-            SighNode leftA = node.left.parameters.get(i);
-            SighNode rightA = node.right.parameters.get(i);
-
-            dependencies[i] = leftA.attr("type");
-            R.set(leftA, "index", i);
-
-            dependencies[i+1] = rightA.attr("type");
-            R.set(rightA, "index", i+1);
-        }
-
         R.rule(node, "type")
-            .using(dependencies)
+            .using(node.left.attr("type"), node.right.attr("type"))
             .by(r -> {
 
-                final int leftSize = node.left.parameters.size();
-                final int rightSize = node.right.parameters.size();
+                Type left  = r.get(0);
+                Type right = r.get(1);
 
-                if (leftSize != rightSize)
-                    r.errorFor(format(
-                        "incompatible arguments provided : expected %d but got %d", leftSize, rightSize),
-                        node.contents());
+                r.set(0, NullType.INSTANCE);
 
-                Type[] paramTypes = new Type[leftSize+rightSize];
-                for (int i = 0; i < paramTypes.length; ++i)
-                    paramTypes[i] = r.get(i);
+                if (!(left instanceof PredicateType))
+                    r.errorFor("Attempting to perform unification on non-predicate type: " + left,
+                        node.left);
 
-                for (int i = 0; i < leftSize + rightSize; i+=2) {
-                    Type left = paramTypes[i];
-                    Type right = paramTypes[i+1];
-
-                    if (!isAssignableTo(left, right))
-                        r.errorFor(format(
-                            "inconsistent parameters provided for argument %d : got %s and %s",
-                            i, left, right),
-                            node.left.parameters.get(i));
-                }
-
-                r.set(0, new FunType(r.get(0), paramTypes));
+                if (!(right instanceof PredicateType))
+                    r.errorFor("Attempting to perform unification on non-predicate type: " + right,
+                        node.right);
             });
     }
 
@@ -983,19 +957,18 @@ public final class SemanticAnalysis
     }
 
     private void argument (ArgumentNode node) {
-        if (node.arg instanceof ParameterNode)
-            R.set(node, "type", ((ParameterNode) node.arg).type);
+        if (node.arg instanceof ParameterNode) {
+            R.rule(node, "type")
+                .using(node.arg.attr("type"))
+                .by(Rule::copyFirst);
+            //R.set(node, "type", ((ParameterNode) node.arg).type);
+        }
         else {
             R.rule(node, "type")
                 .using(node.arg.attr("type"))
                 .by (r -> {
                     r.set(0, r.get(0));
-                });
-
-            //R.rule(node, "type")
-            //    .using(node.arg, "type")
-            //    .by(Rule::copyFirst);
-        }
+                });}
     }
 
     // ---------------------------------------------------------------------------------------------

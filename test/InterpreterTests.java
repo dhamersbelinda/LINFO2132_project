@@ -127,13 +127,15 @@ public final class InterpreterTests extends TestFixture {
     @Test
     public void testLogicFacts () {
         rule = grammar.root;
-        //check("var x: Int = 0; ..dog(x) = dog(a: Int)", false);
-        check("..dog(0) = dog(a: Int)", false);
+        //check("..dog(1, 3, 4) = dog(a: Int, 3)", false); -> exception
+        check("..dog(1+2) = dog(a: Int); return a", 3L);
+        check("var x: Int = 0; ..dog(2, x) = dog(2, a: Int); return a", 0L);
+        check("var x: Int = 7; ..dog(x) = dog(a: Int); return a", 7L);
 
         check("var x: Bool = false; x = x; return x;", false);
         check("var y: Bool = false; var x: Bool = true; x = y; return x;", false);
         check("var x: Bool = false; ..cat(_x); ..dog(y: Bool) :- cat(_x);", null);
-        check("var x: Bool = false; ..cat(_x); ..dog(y: Bool) :- cat(_x) && cat(y);", null);
+        //check("var x: Bool = false; ..cat(_x); ..dog(y: Bool) :- cat(_x) && cat(y);", null);
         //check("var x: Bool = false; ..dog(y: Int) :- { return true }; ..x ?= dog(_poodle); return x;", false);
         //check("var a: Int = 1; var x: Bool = false; fun dog (a: Bool): Bool { return a }; ..x ?= dog(a); return x;", false);
         //check("var a: Int = 1; var x: Bool = false; fun xxx (a: Int): Int { return a }; ..dog(y: Bool) :- { return true }; ..x ?= xxx(a); return x;", false);

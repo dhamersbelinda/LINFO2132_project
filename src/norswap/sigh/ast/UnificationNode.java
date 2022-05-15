@@ -3,7 +3,7 @@ package norswap.sigh.ast;
 import norswap.autumn.positions.Span;
 import norswap.utils.Util;
 
-public class UnificationNode extends SighNode {
+public class UnificationNode extends StatementNode {
     public final PredicateUNode left, right;
 
     public UnificationNode

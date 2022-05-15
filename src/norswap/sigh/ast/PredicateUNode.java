@@ -7,7 +7,7 @@ import java.util.List;
 public class PredicateUNode extends SighNode
 {
     public final String name;
-    public final List<SighNode> parameters;
+    public final List<ArgumentNode> parameters;
 
     @SuppressWarnings("unchecked")
     public PredicateUNode
