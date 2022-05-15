@@ -83,6 +83,8 @@ public final class Interpreter
         visitor.register(PredicateDeclarationNode.class,  this::predDecl);
         visitor.register(PredicateRuleNode.class,         this::predRule);
         visitor.register(BoolQueryNode.class,             this::query);
+        //visitor.register(PredicateIncompleteNode.class,   this::incomplete);
+        visitor.register(UnificationNode.class,           this::unification);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -168,20 +170,20 @@ public final class Interpreter
         if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red
             scope = scope.lookup(node.predicate.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
-        for (int i = 0; i < node.predicate.parameters.size(); i++) {
+        //for (int i = 0; i < node.predicate.parameters.size(); i++) {
             Object[] list = (Object[]) x.get(scope, node.predicate.name);
             if (list==null) list = new Object[0];
             else {
                 for (Object o : list) {
-                    if (o.equals(node.predicate.parameters.get(i)))
+                    if (o.equals(node.predicate.parameters))//.get(i)))
                         throw new IllegalArgumentException();
                 }
             }
             Object[] newList = new Object[list.length+1];
             System.arraycopy(list, 0, newList, 0, list.length);
-            newList[newList.length-1] = node.predicate.parameters.get(i);
+            newList[newList.length-1] = node.predicate.parameters;//.get(i);
             x.set(scope, node.predicate.name, newList);
-        }
+        //}
         return null;
     }
 
@@ -193,9 +195,7 @@ public final class Interpreter
         if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red //why
             scope = scope.lookup(node.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
-        //todo removed x.set(scope, node.toString(), node);
 
-        /*
         Object[] list = (Object[]) x.get(scope, node.name);
         if (list==null) list = new Object[0];
         else {
@@ -206,141 +206,30 @@ public final class Interpreter
         }
         Object[] newList = new Object[list.length+1];
         System.arraycopy(list, 0, newList, 0, list.length);
-        newList[newList.length-1] = node;
+        newList[newList.length-1] = node.predicate;
         x.set(scope, node.name, newList);
-        */
-        x.set(scope, node.name, node);
+        return null;
+    }
+
+    private Void unification (UnificationNode node) {
+        //todo run arguments 1 by 1 and assign values for each missing value
+        //todo throw error if 2 values not initialised
+        //todo throw error if 2 values incompatible types
         return null;
     }
 
     private boolean query (BoolQueryNode node) {
+        //todo if atom check in declarations
+        //todo else if predicate fact check in storage values
+        //todo else Binary
 
-        Scope scope = reactor.get(node.left, "scope");
-        String name = ((ReferenceNode) node.left).name;
 
-        if (node.right instanceof AtomLiteralNode) {
-            //need to check if present in declarations of scope -> look for existence of context
-            DeclarationContext ctx = scope.lookup(((AtomLiteralNode) node.right).name);
-            boolean check = ctx != null;
-            assign(scope, name, check, reactor.get(node, "type"));
-            return check;
-        } else if (node.right instanceof PredicateNode) {
-            //check in predicate declarations
-            ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
-            Object toLook = sto.get(scope, ((PredicateNode) node.right).name()); //Object[] or PredicateRuleNode
-            if (toLook == null) { //the predicate (functor) had never been declared
-                assign(scope, name, false, reactor.get(node, "type"));
-                return false;
-            }
-            //we need to make sure that each of the atoms in node.right are represented
-            if (!(toLook instanceof PredicateRuleNode)) {
-                Object[] toLookPrim = (Object[]) toLook;
-                for (ExpressionNode atomNode : ((PredicateNode) node.right).parameters) {
-                    boolean contained = false;
-                    for (Object o : toLookPrim) {
-                        if (o.equals(atomNode))
-                            contained = true;
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-                }
-                assign(scope, name, true, reactor.get(node, "type"));
-                return true;
-            }
-            //we have a rule
-            //we check the existence of the pred -> would give a string
-            Object[] toLook2 = (Object[]) sto.get(scope, ((PredicateRuleNode) toLook).predicate.name());
-            if (toLook2 == null) { //the predicate (functor) had never been declared
-                assign(scope, name, false, reactor.get(node, "type"));
-                return false;
-            }
-            List<ExpressionNode> given_args = ((PredicateNode) node.right).parameters;
-            List<ParameterNode> params = ((PredicateRuleNode) toLook).parameters;
-            List<ExpressionNode> args = (((PredicateRuleNode) toLook).predicate).parameters;
-            //sizes are not the same
-            if (given_args.size() != params.size()) {
-                assign(scope, name, false, reactor.get(node, "type"));
-                //maybe give an error message here instead?
-                return false;
-            }
+        /*switch (node.operator) {
+            case OR:  return booleanOp(node, false);
+            case AND: return booleanOp(node, true);
+        }*/
 
-            for (ExpressionNode arg : args) {
-                if (arg instanceof ReferenceNode) { //we need to find value
-                    int pos = -1;
-                    for (ParameterNode param : params) {
-                        if (((ReferenceNode) arg).name.equals(param.name())) {
-                            pos = params.indexOf(param);
-                            break;
-                        }
-                    }
-                    //deduce value from outer scope
-                    if (pos == -1) {
-                        //find value
-                        Object r = get(arg); //exception here if not found
-                        boolean contained = false;
-                        for (Object o : toLook2) {
-                            Object r1 = get((SighNode) o);
-                            if (r1.equals(r)) {
-                                contained = true;
-                                break;
-                            }
-                        }
-                        if (!contained) {
-                            assign(scope, name, false, reactor.get(node, "type"));
-                            return false;
-                        }
-                        //if not found -> shouldn't be reached
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-                    //deduce value from given_args
-                    Object given_arg = given_args.get(pos);
-                    Type given_arg_type = reactor.get(given_arg, "type");
-                    Type param_type = reactor.get(params.get(pos), "type");
-                    if (!isAssignableTo(param_type, given_arg_type)) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
-                        //return false; //TODO put exception here
-                    }
-                    Object r2 = get((SighNode) given_arg);
-                    boolean contained = false;
-                    for (Object o : toLook2) {
-                        Object r1 = get((SighNode) o);
-                        if (r1.equals(r2)) {
-                            contained = true;
-                            break;
-                        }
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-
-                } else { //we have its value
-                    Object r1 = get(arg);
-                    boolean contained = false;
-                    for (Object o : toLook2) {
-                        Object r2 = get((SighNode) o);
-                        if (r1.equals(r2)) //comparing values
-                            contained = true;
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-                }
-            }
-            assign(scope, name, true, reactor.get(node, "type"));
-            return true;
-        } else { //we have to evaluate a boolean expression (we have an expressionNode)
-            boolean endVal = (Boolean) this.run(node.right);
-            assign(scope, name, endVal, reactor.get(node, "type"));
-            return endVal;
-        }
-
-        //return true;
+        return true;
     }
 
     // ---------------------------------------------------------------------------------------------

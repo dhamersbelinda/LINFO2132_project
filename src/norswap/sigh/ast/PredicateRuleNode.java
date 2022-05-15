@@ -7,7 +7,7 @@ import java.util.List;
 public class PredicateRuleNode extends DeclarationNode {
     public final String name;
     public final List<ParameterNode> parameters;
-    public final PredicateNode predicate;
+    public final SighNode predicate;
 
     @SuppressWarnings("unchecked")
     public PredicateRuleNode
@@ -15,7 +15,7 @@ public class PredicateRuleNode extends DeclarationNode {
         super(span);
         this.name = Util.cast(name, String.class);
         this.parameters = Util.cast(parameters, List.class);
-        this.predicate = Util.cast(predicate, PredicateNode.class);
+        this.predicate = Util.cast(predicate, SighNode.class);
     }
 
     @Override public String contents () {

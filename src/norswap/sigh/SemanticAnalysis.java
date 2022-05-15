@@ -126,12 +126,12 @@ public final class SemanticAnalysis
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
 
-        //walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
         walker.register(AtomDeclarationNode.class,      PRE_VISIT,  analysis::atomDecl);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
         walker.register(PredicateDeclarationNode.class, PRE_VISIT,  analysis::predicateDecl);
         walker.register(PredicateRuleNode.class,        PRE_VISIT,  analysis::predicateRule);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
+        walker.register(UnificationNode.class,          PRE_VISIT,  analysis::unification);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -543,6 +543,55 @@ public final class SemanticAnalysis
         });
     }
 
+    private void unification (UnificationNode node) {
+        this.inferenceContext = node;
+
+        int max = Math.min(node.left.parameters.size(), node.right.parameters.size());
+
+        Attribute[] dependencies = new Attribute[node.left.parameters.size() + node.right.parameters.size()];
+        for (int i=0; i<max; i+=2) {
+            //System.out.println(max + "=>" + i);
+            ExpressionNode leftA = node.left.parameters.get(i);
+            ExpressionNode rightA = node.right.parameters.get(i);
+
+            dependencies[i] = leftA.attr("type");
+            R.set(leftA, "index", i);
+
+            dependencies[i+1] = rightA.attr("type");
+            R.set(rightA, "index", i+1);
+        }
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+
+                final int leftSize = node.left.parameters.size();
+                final int rightSize = node.right.parameters.size();
+
+                if (leftSize != rightSize)
+                    r.errorFor(format(
+                        "incompatible arguments provided : expected %d but got %d", leftSize, rightSize),
+                        node.contents());
+
+                Type[] paramTypes = new Type[leftSize+rightSize];
+                for (int i = 0; i < paramTypes.length; ++i)
+                    paramTypes[i] = r.get(i);
+
+                for (int i = 0; i < leftSize + rightSize; i+=2) {
+                    Type left = paramTypes[i];
+                    Type right = paramTypes[i+1];
+
+                    if (!isAssignableTo(left, right))
+                        r.errorFor(format(
+                            "inconsistent parameters provided for argument %d : got %s and %s",
+                            i, left, right),
+                            node.left.parameters.get(i));
+                }
+
+                r.set(0, new FunType(r.get(0), paramTypes));
+            });
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private void unaryExpression (UnaryExpressionNode node)
@@ -660,10 +709,10 @@ public final class SemanticAnalysis
     {
         r.set(0, BoolType.INSTANCE);
 
-        if (!(left instanceof BoolType))
+        if (!(left instanceof BoolType || left instanceof FunType))
             r.errorFor("Attempting to perform binary logic on non-boolean type: " + left,
                 node.left);
-        if (!(right instanceof BoolType))
+        if (!(right instanceof BoolType || left instanceof FunType))
             r.errorFor("Attempting to perform binary logic on non-boolean type: " + right,
                 node.right);
     }

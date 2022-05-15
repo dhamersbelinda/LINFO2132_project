@@ -138,6 +138,11 @@ public class SighGrammar extends Grammar
         paren_expression,
         array);
 
+    public rule basic_logic = choice(
+        atom_identifier,
+        reference
+    );
+
     public rule function_args =
         seq(LPAREN, expressions, RPAREN);
 
@@ -150,8 +155,19 @@ public class SighGrammar extends Grammar
         .suffix(function_args,
             $ -> new FunCallNode($.span(), $.$[0], $.$[1]));
 
+    public rule pred_suffix_expression = left_expression()
+        .left(choice(basic_logic))
+        .suffix(function_args,
+            $ -> new PredicateNode($.span(), $.$[0], $.$[1]));
+
+
     public rule prefix_expression = right_expression()
         .operand(suffix_expression)
+        .prefix(BANG.as_val(NOT),
+            $ -> new UnaryExpressionNode($.span(), $.$[0], $.$[1]));
+
+    public rule pred_prefix_expression = right_expression()
+        .operand(pred_suffix_expression)
         .prefix(BANG.as_val(NOT),
             $ -> new UnaryExpressionNode($.span(), $.$[0], $.$[1]));
 
@@ -192,8 +208,18 @@ public class SighGrammar extends Grammar
         .infix(AMP_AMP.as_val(BinaryOperator.AND),
             $ -> new BinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
 
+    public rule pred_and_expression = left_expression()
+        .operand(pred_prefix_expression)
+        .infix(AMP_AMP.as_val(BinaryOperator.AND),
+            $ -> new BinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
+
     public rule or_expression = left_expression()
         .operand(and_expression)
+        .infix(BAR_BAR.as_val(BinaryOperator.OR),
+            $ -> new BinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
+
+    public rule pred_or_expression = left_expression()
+        .operand(pred_and_expression)
         .infix(BAR_BAR.as_val(BinaryOperator.OR),
             $ -> new BinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
 
@@ -206,7 +232,7 @@ public class SighGrammar extends Grammar
         DOT_DOT,
         reference,
         BOOL_QUERY,
-        choice(atom_identifier, predicate, or_expression)
+        pred_or_expression
         ).push($ -> new BoolQueryNode($.span(), $.$[0], $.$[1]));
 
     public rule atom_decl =
@@ -224,8 +250,12 @@ public class SighGrammar extends Grammar
             this.parameters,
             RPAREN,
             TURNSTILE,
-            predicate) //TODO do we really need the block with the braces?
+            pred_or_expression) //TODO do we really need the block with the braces?
             .push($ -> new PredicateRuleNode($.span(), $.$[0], $.$[1], $.$[2])));
+
+    public rule unification =
+        seq(DOT_DOT, predicate, EQUALS, predicate)
+            .push($ -> new UnificationNode($.span(), $.$[0], $.$[1]));
 
     public rule expression = //faut rien changer ici non?
         //choice(assignment_expression);
@@ -249,8 +279,9 @@ public class SighGrammar extends Grammar
         seq(array_type);
 
     public rule logic_declaration = lazy(() -> choice(
-       this.atom_decl,
-       this.predicate_decl,
+        this.atom_decl,
+        this.unification,
+        this.predicate_decl,
         this.predicate_rule
     ));
 
