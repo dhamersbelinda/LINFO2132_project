@@ -127,7 +127,8 @@ public final class InterpreterTests extends TestFixture {
     @Test
     public void testLogicFacts () {
         rule = grammar.root;
-        check("..dog(a, 2) = dog(1, 2)", false);
+        //check("var x: Int = 0; ..dog(x) = dog(a: Int)", false);
+        check("..dog(0) = dog(a: Int)", false);
 
         check("var x: Bool = false; x = x; return x;", false);
         check("var y: Bool = false; var x: Bool = true; x = y; return x;", false);

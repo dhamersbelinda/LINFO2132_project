@@ -83,7 +83,6 @@ public final class Interpreter
         visitor.register(PredicateDeclarationNode.class,  this::predDecl);
         visitor.register(PredicateRuleNode.class,         this::predRule);
         visitor.register(BoolQueryNode.class,             this::query);
-        //visitor.register(PredicateIncompleteNode.class,   this::incomplete);
         visitor.register(UnificationNode.class,           this::unification);
 
         // statement groups & declarations

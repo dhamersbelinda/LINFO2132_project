@@ -4,13 +4,13 @@ import norswap.autumn.positions.Span;
 import norswap.utils.Util;
 
 public class UnificationNode extends SighNode {
-    public final PredicateNode left, right;
+    public final PredicateUNode left, right;
 
     public UnificationNode
         (Span span, Object left, Object right) {
         super(span);
-        this.left = Util.cast(left, PredicateNode.class);
-        this.right = Util.cast(right, PredicateNode.class);
+        this.left = Util.cast(left, PredicateUNode.class);
+        this.right = Util.cast(right, PredicateUNode.class);
     }
 
     @Override public String contents () {

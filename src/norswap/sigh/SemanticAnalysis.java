@@ -132,6 +132,8 @@ public final class SemanticAnalysis
         walker.register(PredicateRuleNode.class,        PRE_VISIT,  analysis::predicateRule);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
         walker.register(UnificationNode.class,          PRE_VISIT,  analysis::unification);
+        walker.register(PredicateUNode.class,            PRE_VISIT,  analysis::predicateU);
+        walker.register(ArgumentNode.class,            PRE_VISIT,  analysis::argument);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -187,6 +189,11 @@ public final class SemanticAnalysis
     }
 
     private void predicate (PredicateNode node)
+    {
+        R.set(node, "type", PredicateType.INSTANCE);
+    }
+
+    private void predicateU (PredicateUNode node)
     {
         R.set(node, "type", PredicateType.INSTANCE);
     }
@@ -546,13 +553,12 @@ public final class SemanticAnalysis
     private void unification (UnificationNode node) {
         this.inferenceContext = node;
 
-        int max = Math.min(node.left.parameters.size(), node.right.parameters.size());
+        int min = Math.min(node.left.parameters.size(), node.right.parameters.size());
 
         Attribute[] dependencies = new Attribute[node.left.parameters.size() + node.right.parameters.size()];
-        for (int i=0; i<max; i+=2) {
-            //System.out.println(max + "=>" + i);
-            ExpressionNode leftA = node.left.parameters.get(i);
-            ExpressionNode rightA = node.right.parameters.get(i);
+        for (int i=0; i<min; i+=2) {
+            SighNode leftA = node.left.parameters.get(i);
+            SighNode rightA = node.right.parameters.get(i);
 
             dependencies[i] = leftA.attr("type");
             R.set(leftA, "index", i);
@@ -742,6 +748,9 @@ public final class SemanticAnalysis
 
     private void boolquery (BoolQueryNode node)
     { //assignment
+        scope = new Scope(node, scope);
+        R.set(node, "scope", scope);
+
         R.rule(node, "type")
             .using(node.left.attr("type"), node.right.attr("type"))
             .by(r -> {
@@ -971,6 +980,22 @@ public final class SemanticAnalysis
         R.rule(node, "type")
         .using(node.type, "value")
         .by(Rule::copyFirst);
+    }
+
+    private void argument (ArgumentNode node) {
+        if (node.arg instanceof ParameterNode)
+            R.set(node, "type", ((ParameterNode) node.arg).type);
+        else {
+            R.rule(node, "type")
+                .using(node.arg.attr("type"))
+                .by (r -> {
+                    r.set(0, r.get(0));
+                });
+
+            //R.rule(node, "type")
+            //    .using(node.arg, "type")
+            //    .by(Rule::copyFirst);
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
