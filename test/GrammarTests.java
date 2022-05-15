@@ -10,6 +10,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static norswap.sigh.ast.BinaryOperator.*;
+import static norswap.sigh.ast.UnaryOperator.NOT;
 
 public class GrammarTests extends AutumnTestFixture {
     // ---------------------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect("true", new ReferenceNode(null, "true"));
         successExpect("false", new ReferenceNode(null, "false"));
         successExpect("null", new ReferenceNode(null, "null"));
-        successExpect("!false", new UnaryExpressionNode(null, UnaryOperator.NOT, new ReferenceNode(null, "false")));
+        successExpect("!false", new UnaryExpressionNode(null, NOT, new ReferenceNode(null, "false")));
     }
 
     @Test
@@ -89,12 +90,12 @@ public class GrammarTests extends AutumnTestFixture {
     @Test
     public void boolqueries () {
         rule = grammar.expression_stmt;
-        /*successExpect("..boolean1 ?= 1 + 2",
+        successExpect("..boolean1 ?= 1 + 2",
             new ExpressionStatementNode(null,
             new BoolQueryNode(null,
                 new ReferenceNode(null, "boolean1"),
                 new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
-            ));*/
+            ));
         success("..boolean1 ?= 1 + 2");
         successExpect("..boolean1 ?= _atomFact",
             new ExpressionStatementNode(null,
@@ -140,6 +141,60 @@ public class GrammarTests extends AutumnTestFixture {
                                                 new ReferenceNode(null, "cat"),
                                                 asList(intlit(1))))
                         ))));
+        successExpect("..boolean1 ?= dog(2) && cat(_atomic)",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new LogicBinaryExpressionNode(null,
+                                        new PredicateNode(null,
+                                                "dog",
+                                                asList(intlit(2))),
+                                        AND,
+                                        new PredicateNode(null,
+                                                "cat",
+                                                asList(atomlit("_atomic"))))
+                                )));
+        successExpect("..boolean1 ?= dog(2) || _atomic",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new LogicBinaryExpressionNode(null,
+                                        new PredicateNode(null,
+                                                "dog",
+                                                asList(intlit(2))),
+                                        OR,
+                                        atomlit("_atomic"))
+                        )));
+        successExpect("..boolean1 ?= mouse(1) && (dog(2) || _atomic)",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new LogicBinaryExpressionNode(null,
+                                        new PredicateNode(null,
+                                                "mouse",
+                                                asList(intlit(1))),
+                                        AND,
+                                        new LogicParenthesizedNode(null,
+                                        new LogicBinaryExpressionNode(null,
+                                                new PredicateNode(null,
+                                                        "dog",
+                                                        asList(intlit(2))),
+                                                OR,
+                                                atomlit("_atomic"))))
+                        )));
+        successExpect("..boolean1 ?= ! dog(2) || _atomic",
+                new ExpressionStatementNode(null,
+                        new BoolQueryNode(null,
+                                new ReferenceNode(null, "boolean1"),
+                                new LogicBinaryExpressionNode(null,
+                                        new LogicUnaryExpressionNode(null,
+                                        NOT,
+                                        new PredicateNode(null,
+                                                "dog",
+                                                asList(intlit(2)))),
+                                        OR,
+                                        atomlit("_atomic"))
+                        )));
         /*
         successExpect("..boolean1 ?= true",
                 new ExpressionStatementNode(null,
@@ -166,8 +221,24 @@ public class GrammarTests extends AutumnTestFixture {
                     asList(new ReferenceNode(null,
                             "breed"))))
             );
+        successExpect("..cat(breed: Int) :- ! dog(2) || _atomic",
+                new PredicateRuleNode(null,
+                        "cat",
+                        asList(new ParameterNode(null,
+                                "breed",
+                                new SimpleTypeNode(null, "Int"))),
+                        new LogicBinaryExpressionNode(null,
+                                new LogicUnaryExpressionNode(null,
+                                        NOT,
+                                        new PredicateNode(null,
+                                                "dog",
+                                                asList(intlit(2)))),
+                                OR,
+                                atomlit("_atomic"))
+                ));
         failure("..cat(breed) :- { return true }"); // not right structure
         failure("..cat(breed: Int) :- true"); //TODO not (yet) a predicate
+        //TODO more tests
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -14,10 +14,7 @@ import norswap.utils.exceptions.Exceptions;
 import norswap.utils.exceptions.NoStackException;
 import norswap.utils.visitors.ValuedVisitor;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.lang.String.format;
 import static norswap.utils.Util.cast;
@@ -218,130 +215,288 @@ public final class Interpreter
         Scope scope = reactor.get(node.left, "scope");
         String name = ((ReferenceNode) node.left).name;
 
-        if (node.right instanceof AtomLiteralNode) {
-            //need to check if present in declarations of scope -> look for existence of context
-            DeclarationContext ctx = scope.lookup(((AtomLiteralNode) node.right).name);
-            boolean check = ctx != null;
-            assign(scope, name, check, reactor.get(node, "type"));
-            return check;
-        } else if (node.right instanceof PredicateNode) {
-            //check in predicate declarations
-            ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
-            Object toLook = sto.get(scope, ((PredicateNode) node.right).name()); //Object[] or PredicateRuleNode
-            if (toLook == null) { //the predicate (functor) had never been declared
-                assign(scope, name, false, reactor.get(node, "type"));
-                return false;
-            }
-            //we need to make sure that each of the atoms in node.right are represented
-            if (!(toLook instanceof PredicateRuleNode)) {
-                Object[] toLookPrim = (Object[]) toLook;
-                for (ExpressionNode atomNode : ((PredicateNode) node.right).parameters) {
-                    boolean contained = false;
-                    for (Object o : toLookPrim) {
-                        if (o.equals(atomNode))
-                            contained = true;
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
+        ExpressionNode toFind = node.right;
+
+        if (toFind instanceof AtomLiteralNode) {
+            boolean result = retrieve(node, (AtomLiteralNode) toFind);
+            assign(scope, name, result, reactor.get(node, "type"));
+            return result;
+        } else if (toFind instanceof LogicParenthesizedNode) {
+            boolean result = retrieve(node, (LogicParenthesizedNode) toFind);
+            assign(scope, name, result, reactor.get(node, "type"));
+            return result;
+        } else if (toFind instanceof LogicUnaryExpressionNode) {
+            boolean result = retrieve(node, (LogicUnaryExpressionNode) toFind);
+            assign(scope, name, result, reactor.get(node, "type"));
+            return result;
+        } else if (toFind instanceof LogicBinaryExpressionNode) {
+            boolean result = retrieve(node, (LogicBinaryExpressionNode) toFind);
+            assign(scope, name, result, reactor.get(node, "type"));
+            return result;
+        } else if (toFind instanceof PredicateNode) {
+            boolean result = retrieve(node, (PredicateNode) toFind);
+            assign(scope, name, result, reactor.get(node, "type"));
+            return result;
+        }
+        throw new IllegalArgumentException("Illegal content in BoolQuery");
+    }
+
+    public boolean retrieve(BoolQueryNode node, PredicateNode toFind) {
+        Scope scope = reactor.get(node.left, "scope");
+
+        ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
+        Object toLook = sto.get(scope, toFind.name()); //Object[] or PredicateRuleNode
+        if (toLook == null) { //the predicate (functor) had never been declared
+            return false;
+        }
+        //we need to make sure that each of the objects in node.right are represented
+        if (!(toLook instanceof PredicateRuleNode)) {
+            Object[] toMatchList = (Object[]) toLook; //list of args that have been declared
+            for (ExpressionNode givenParam : toFind.parameters) {
+                boolean contained = false;
+                Object r1 = get(givenParam);
+                for (Object o : toMatchList) {
+                    Object r2 = get((SighNode) o);
+                    if (r2.equals(r1))
+                        contained = true;
                 }
-                assign(scope, name, true, reactor.get(node, "type"));
-                return true;
-            }
-            //we have a rule
-            //we check the existence of the pred -> would give a string
-            Object[] toLook2 = (Object[]) sto.get(scope, ((PredicateRuleNode) toLook).predicate.name());
-            if (toLook2 == null) { //the predicate (functor) had never been declared
-                assign(scope, name, false, reactor.get(node, "type"));
-                return false;
-            }
-            List<ExpressionNode> given_args = ((PredicateNode) node.right).parameters;
-            List<ParameterNode> params = ((PredicateRuleNode) toLook).parameters;
-            List<ExpressionNode> args = (((PredicateRuleNode) toLook).predicate).parameters;
-            //sizes are not the same
-            if (given_args.size() != params.size()) {
-                assign(scope, name, false, reactor.get(node, "type"));
-                //maybe give an error message here instead?
-                return false;
-            }
-
-            for (ExpressionNode arg : args) {
-                if (arg instanceof ReferenceNode) { //we need to find value
-                    int pos = -1;
-                    for (ParameterNode param : params) {
-                        if (((ReferenceNode) arg).name.equals(param.name())) {
-                            pos = params.indexOf(param);
-                            break;
-                        }
-                    }
-                    //deduce value from outer scope
-                    if (pos == -1) {
-                        //find value
-                        Object r = get(arg); //exception here if not found
-                        boolean contained = false;
-                        for (Object o : toLook2) {
-                            Object r1 = get((SighNode) o);
-                            if (r1.equals(r)) {
-                                contained = true;
-                                break;
-                            }
-                        }
-                        if (!contained) {
-                            assign(scope, name, false, reactor.get(node, "type"));
-                            return false;
-                        }
-                        //if not found -> shouldn't be reached
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-                    //deduce value from given_args
-                    Object given_arg = given_args.get(pos);
-                    Type given_arg_type = reactor.get(given_arg, "type");
-                    Type param_type = reactor.get(params.get(pos), "type");
-                    if (!isAssignableTo(param_type, given_arg_type)) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
-                        //return false; //TODO put exception here
-                    }
-                    Object r2 = get((SighNode) given_arg);
-                    boolean contained = false;
-                    for (Object o : toLook2) {
-                        Object r1 = get((SighNode) o);
-                        if (r1.equals(r2)) {
-                            contained = true;
-                            break;
-                        }
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
-
-                } else { //we have its value
-                    Object r1 = get(arg);
-                    boolean contained = false;
-                    for (Object o : toLook2) {
-                        Object r2 = get((SighNode) o);
-                        if (r1.equals(r2)) //comparing values
-                            contained = true;
-                    }
-                    if (!contained) {
-                        assign(scope, name, false, reactor.get(node, "type"));
-                        return false;
-                    }
+                if (!contained) {
+                    return false;
                 }
             }
-            assign(scope, name, true, reactor.get(node, "type"));
             return true;
-        } else { //we have to evaluate a boolean expression (we have an expressionNode)
-            boolean endVal = (Boolean) this.run(node.right);
-            assign(scope, name, endVal, reactor.get(node, "type"));
-            return endVal;
+        } else {
+            return predicateRuleVal(node, toFind, (PredicateRuleNode) toLook);
+        }
+    }
+    public boolean predicateRuleVal(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode) {
+        Scope scope = reactor.get(node.left, "scope");
+        ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
+        ExpressionNode ruleRight = ruleNode.right;
+
+        //check consistency of queried predicate and rule
+        List<ExpressionNode> given_args = queriedPredicate.parameters;
+        List<ParameterNode> params = ruleNode.parameters;
+        //size check
+        if (given_args.size() != params.size()) {
+            throw new IllegalArgumentException("size not consistent"); //TODO improve message
+        }
+        //type check
+        for (int pos = 0; pos < given_args.size(); pos = pos + 1) {
+            Type given_arg_type = reactor.get(given_args.get(pos), "type");
+            Type param_type = reactor.get(params.get(pos), "type");
+            if (!isAssignableTo(param_type, given_arg_type)) {
+                throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
+            }
         }
 
-        //return true;
+        //we need to retrieve whatever is on the right of the rule
+        if (ruleRight instanceof AtomLiteralNode)
+            return retrieve(node, (AtomLiteralNode) ruleRight);
+        else if (ruleRight instanceof PredicateNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) ruleRight);
+        else if (ruleRight instanceof LogicParenthesizedNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicParenthesizedNode) ruleRight);
+        else if (ruleRight instanceof LogicUnaryExpressionNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicUnaryExpressionNode) ruleRight);
+        else if (ruleRight instanceof LogicBinaryExpressionNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) ruleRight);
+        else
+            throw new IllegalArgumentException("Wrong type in PredicateRuleVal");
     }
+
+    public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, PredicateNode component) {
+        Scope scope = reactor.get(node.left, "scope");
+        ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
+
+        //we check if the component has been declared
+        Object componentDecl = sto.get(scope, component.name());
+        if (componentDecl == null) { //the predicate (functor) had never been declared
+            return false;
+        }
+
+
+        List<ExpressionNode> given_args = queriedPredicate.parameters;
+        List<ParameterNode> params = ruleNode.parameters;
+        List<ExpressionNode> args = component.parameters;
+        //make copy
+        List<ExpressionNode> args_to_replace = new ArrayList<ExpressionNode>(args);
+
+        for (int i = 0; i < args_to_replace.size(); i++) {
+            ExpressionNode arg = args_to_replace.get(i);
+            if (arg instanceof ReferenceNode) { //we need to find value
+                int pos = -1;
+                for (ParameterNode param : params) {
+                    if (((ReferenceNode) arg).name.equals(param.name())) {
+                        pos = params.indexOf(param);
+                        break;
+                    }
+                }
+
+                //deduce value from given_args or from outer scope
+                Object given_arg;
+                if (pos != -1)
+                    given_arg = given_args.get(pos);
+                else
+                    given_arg = arg; //TODO get(arg)
+                Type given_arg_type = reactor.get(given_arg, "type");
+                Type arg_type = reactor.get(arg, "type"); //TODO hope this works
+                if (!isAssignableTo(arg_type, given_arg_type)) {
+                    throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, arg_type.name()));
+                }
+                args_to_replace.set(i, (ExpressionNode) given_arg);
+            }
+        }
+        return retrieve(node, new PredicateNode(component.span, component.name, args_to_replace));
+
+    }
+
+    public boolean retrieve(BoolQueryNode node, AtomLiteralNode toFind) {
+        Scope scope = reactor.get(node.left, "scope");
+        DeclarationContext ctx = scope.lookup(toFind.name);
+        boolean check = ctx != null;
+        return check;
+    }
+
+    public boolean retrieve(BoolQueryNode node, LogicParenthesizedNode toFind) {
+        ExpressionNode expression = toFind.expression;
+        if (expression instanceof AtomLiteralNode)
+            return retrieve(node, (AtomLiteralNode) expression);
+        else if (expression instanceof LogicParenthesizedNode)
+            return retrieve(node, (LogicParenthesizedNode)expression);
+        else if (expression instanceof LogicUnaryExpressionNode)
+            return retrieve(node, (LogicUnaryExpressionNode) expression);
+        else if (expression instanceof LogicBinaryExpressionNode)
+            return retrieve(node, (LogicBinaryExpressionNode)expression);
+        else if (expression instanceof PredicateNode)
+            return retrieve(node, (PredicateNode)expression);
+        throw new IllegalArgumentException("Illegal type in BoolQuery.");
+    }
+
+    public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, LogicParenthesizedNode component) {
+        ExpressionNode expression = component.expression;
+        if (expression instanceof AtomLiteralNode)
+            return retrieve(node, (AtomLiteralNode) expression);
+        else if (expression instanceof LogicParenthesizedNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicParenthesizedNode) expression);
+        else if (expression instanceof LogicUnaryExpressionNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicUnaryExpressionNode) expression);
+        else if (expression instanceof LogicBinaryExpressionNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression);
+        else if (expression instanceof PredicateNode)
+            return replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression);
+        throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve logicParen");
+    }
+
+    public boolean retrieve(BoolQueryNode node, LogicUnaryExpressionNode toFind) {
+        ExpressionNode expression = toFind.operand;
+        if (expression instanceof AtomLiteralNode)
+            return ! retrieve(node, (AtomLiteralNode) expression);
+        else if (expression instanceof LogicParenthesizedNode)
+            return ! retrieve(node, (LogicParenthesizedNode)expression);
+        else if (expression instanceof LogicUnaryExpressionNode)
+            return ! retrieve(node, (LogicUnaryExpressionNode) expression);
+        else if (expression instanceof LogicBinaryExpressionNode)
+            return ! retrieve(node, (LogicBinaryExpressionNode)expression);
+        else if (expression instanceof PredicateNode)
+            return ! retrieve(node, (PredicateNode)expression);
+        throw new IllegalArgumentException("Illegal type in BoolQuery.");
+    }
+
+    public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, LogicUnaryExpressionNode component) {
+        ExpressionNode expression = component.operand;
+        if (expression instanceof AtomLiteralNode)
+            return ! retrieve(node, (AtomLiteralNode) expression);
+        else if (expression instanceof LogicParenthesizedNode)
+            return ! replaceRetrieve(node, queriedPredicate, ruleNode, (LogicParenthesizedNode) expression);
+        else if (expression instanceof LogicUnaryExpressionNode)
+            return ! replaceRetrieve(node, queriedPredicate, ruleNode, (LogicUnaryExpressionNode) expression);
+        else if (expression instanceof LogicBinaryExpressionNode)
+            return ! replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression);
+        else if (expression instanceof PredicateNode)
+            return ! replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression);
+        throw new IllegalArgumentException("Illegal type in BoolQuery.replaceRetriev logicUnary");
+    }
+
+    public boolean retrieve(BoolQueryNode node, LogicBinaryExpressionNode toFind) {
+        ExpressionNode expression1 = toFind.left;
+        ExpressionNode expression2 = toFind.right;
+
+        boolean check1 = false;
+        boolean check2 = false;
+        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+        if (expression1 instanceof AtomLiteralNode)
+            check1 =  retrieve(node, (AtomLiteralNode) expression1);
+        else if (expression1 instanceof LogicParenthesizedNode)
+            check1 = retrieve(node, (LogicParenthesizedNode)expression1);
+        else if (expression1 instanceof LogicUnaryExpressionNode)
+            check1 = retrieve(node, (LogicUnaryExpressionNode) expression1);
+        else if (expression1 instanceof LogicBinaryExpressionNode)
+            check1 = retrieve(node, (LogicBinaryExpressionNode)expression1);
+        else if (expression1 instanceof PredicateNode)
+            check1 = retrieve(node, (PredicateNode)expression1);
+        else
+            throw new IllegalArgumentException("Illegal type in BoolQuery.");
+
+        if (expression2 instanceof AtomLiteralNode)
+            check2 =  retrieve(node, (AtomLiteralNode) expression2);
+        else if (expression2 instanceof LogicParenthesizedNode)
+            check2 = retrieve(node, (LogicParenthesizedNode)expression2);
+        else if (expression2 instanceof LogicUnaryExpressionNode)
+            check2 = retrieve(node, (LogicUnaryExpressionNode) expression2);
+        else if (expression2 instanceof LogicBinaryExpressionNode)
+            check2 = retrieve(node, (LogicBinaryExpressionNode)expression2);
+        else if (expression2 instanceof PredicateNode)
+            check2 = retrieve(node, (PredicateNode)expression2);
+        else
+            throw new IllegalArgumentException("Illegal type in BoolQuery.");
+
+        if (toFind.operator == BinaryOperator.AND)
+            return check1 && check2;
+        else
+            return check1 || check2;
+    }
+
+    public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, LogicBinaryExpressionNode component) {
+        ExpressionNode expression1 = component.left;
+        ExpressionNode expression2 = component.right;
+
+        boolean check1 = false;
+        boolean check2 = false;
+        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+        if (expression1 instanceof AtomLiteralNode)
+            check1 =  retrieve(node, (AtomLiteralNode) expression1);
+        else if (expression1 instanceof LogicParenthesizedNode)
+            check1 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicParenthesizedNode) expression1);
+        else if (expression1 instanceof LogicUnaryExpressionNode)
+            check1 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicUnaryExpressionNode) expression1);
+        else if (expression1 instanceof LogicBinaryExpressionNode)
+            check1 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression1);
+        else if (expression1 instanceof PredicateNode)
+            check1 = replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression1);
+        else
+            throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve expression1 logicbinary");
+
+        if (expression2 instanceof AtomLiteralNode)
+            check2 =  retrieve(node, (AtomLiteralNode) expression2);
+        else if (expression2 instanceof LogicParenthesizedNode)
+            check2 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicParenthesizedNode) expression2);
+        else if (expression2 instanceof LogicUnaryExpressionNode)
+            check2 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicUnaryExpressionNode) expression2);
+        else if (expression2 instanceof LogicBinaryExpressionNode)
+            check2 = replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression2);
+        else if (expression2 instanceof PredicateNode)
+            check2 = replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression2);
+        else
+            throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve expression2 logicbinary");
+
+        if (component.operator == BinaryOperator.AND)
+            return check1 && check2;
+        else
+            return check1 || check2;
+    }
+
+
 
     // ---------------------------------------------------------------------------------------------
 

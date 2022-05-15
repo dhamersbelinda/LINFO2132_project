@@ -184,11 +184,17 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
         failureInput("var x: Bool = false;\n ..x ?= 1 + 2; x = true");
         //TODO don't know how to test the last error
         successInput("var x: Bool = false;\n ..x ?= dog(_poodle); x = true");
-        failureInputWith("var x: Bool = false;\n ..x ?= true || false; x = false", "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
-        failureInputWith("var x: Bool = false;\n ..x ?= true; x = false", "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
+        successInput("var x: Bool = false;\n ..x ?= true || false; x = false");//, "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
+        successInput("var x: Bool = false;\n ..x ?= true; x = false");//, "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
 
         successInput("var x: Bool = false;\n ..x ?= _atomFact; x = false");
         successInput("..dog(_poodle); ..cat(breed: Int) :- dog(breed, 1);");
+        successInput("var x: Bool = false; ..x ?= dog(1 + 2)");
+        successInput("var x: Bool = false; ..x ?= dog(2) && cat(_atomic)");
+        successInput("var x: Bool = false; ..x ?= dog(2) || _atomic");
+        successInput("var x: Bool = false; ..x ?= mouse(1) && (dog(2) || _atomic)");
+        successInput("var x: Bool = false; ..x ?= ! dog(2) || _atomic");
+
     }
 
     // ---------------------------------------------------------------------------------------------
