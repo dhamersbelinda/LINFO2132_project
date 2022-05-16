@@ -80,6 +80,7 @@ public final class Interpreter
         visitor.register(PredicateDeclarationNode.class,  this::predDecl);
         visitor.register(PredicateRuleNode.class,         this::predRule);
         visitor.register(BoolQueryNode.class,             this::query);
+        visitor.register(UnificationNode.class,           this::unification);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -165,6 +166,53 @@ public final class Interpreter
         if (decl instanceof PredicateDeclarationNode || decl instanceof PredicateRuleNode) //red
             scope = scope.lookup(node.predicate.name).scope;
         x = (scope == rootScope) ? rootStorage : storage;
+
+        Object[] list = (Object[]) x.get(scope, node.predicate.name); //list with rules and arglist
+        int pos = -1;
+        //find position of arglist
+        if (list == null) {
+            list = new Object[0];
+        }
+        for (int i = 0; i < list.length; i++) {
+            if (!(list[i] instanceof PredicateRuleNode)) {
+                pos = i;
+                break;
+            }
+        }
+
+        Object[] factList;
+        if (pos == -1)
+            factList = new Object[0];
+        else
+            factList = (Object[]) list[pos];
+
+        for (int i = 0; i < node.predicate.parameters.size(); i++) {
+            //check if present
+            for (Object o : factList) {
+                if (o.equals(node.predicate.parameters.get(i)))
+                    throw new IllegalArgumentException();
+            }
+            //add
+            Object[] newList = new Object[factList.length+1];
+            System.arraycopy(factList, 0, newList, 0, factList.length);
+            newList[newList.length-1] = node.predicate.parameters.get(i);
+            factList = newList;
+        }
+
+        //add to big list
+        if (pos == -1) {
+            Object[] newList = new Object[list.length+1];
+            System.arraycopy(list, 0, newList, 0, list.length);
+            newList[newList.length-1] = factList;
+            list = newList;
+        } else {
+            list[pos] = factList;
+        }
+
+        x.set(scope, node.predicate.name, list);
+
+
+/*
         for (int i = 0; i < node.predicate.parameters.size(); i++) {
             Object[] list = (Object[]) x.get(scope, node.predicate.name);
             if (list==null) list = new Object[0];
@@ -178,7 +226,7 @@ public final class Interpreter
             System.arraycopy(list, 0, newList, 0, list.length);
             newList[newList.length-1] = node.predicate.parameters.get(i);
             x.set(scope, node.predicate.name, newList);
-        }
+        }*/
         return null;
     }
 
@@ -192,12 +240,12 @@ public final class Interpreter
         x = (scope == rootScope) ? rootStorage : storage;
         //todo removed x.set(scope, node.toString(), node);
 
-        /*
+
         Object[] list = (Object[]) x.get(scope, node.name);
         if (list==null) list = new Object[0];
         else {
             for (Object o : list) {
-                if (o.equals(node))
+                if (!(o instanceof PredicateRuleNode) && (o.equals(node)))
                     throw new IllegalArgumentException();
             }
         }
@@ -205,8 +253,39 @@ public final class Interpreter
         System.arraycopy(list, 0, newList, 0, list.length);
         newList[newList.length-1] = node;
         x.set(scope, node.name, newList);
-        */
-        x.set(scope, node.name, node);
+        return null;
+    }
+
+    private Void unification (UnificationNode node) {
+        //todo run arguments 1 by 1 and assign values for each missing value
+        //todo throw error if 2 values not initialised
+        //todo throw error if 2 values incompatible types
+
+        if (!node.left.name.equals(node.right.name))
+            throw new InputMismatchException("Left expression and right expression don't use the same decleration");
+
+        if (node.left.parameters.size() != node.right.parameters.size())
+            throw new InputMismatchException("Left expression and right expression don't have matching signatures");
+
+        for (int i=0; i<node.left.parameters.size(); i++) {
+            SighNode left = node.left.parameters.get(i).arg;
+            SighNode right = node.right.parameters.get(i).arg;
+            Type leftT = reactor.get(left, "type");
+            Type rightT = reactor.get(right, "type");
+
+            if (left instanceof ParameterNode && right instanceof ParameterNode)
+                throw new IllegalArgumentException("Arguments can't both be ParameterNode");
+
+            if (leftT != rightT)
+                throw new InputMismatchException("Arguments don't have the same types");
+
+            if (left instanceof ParameterNode) {
+                assign(rootScope, ((ParameterNode) left).name, get(right), leftT);
+            } else if (right instanceof ParameterNode) {
+                assign(rootScope, ((ParameterNode) right).name, get(left), rightT);
+                storage.get(rootScope, ((ParameterNode) right).name);
+            }
+        }
         return null;
     }
 
@@ -245,29 +324,41 @@ public final class Interpreter
         Scope scope = reactor.get(node.left, "scope");
 
         ScopeStorage sto = (scope == rootScope) ? rootStorage : storage;
-        Object toLook = sto.get(scope, toFind.name()); //Object[] or PredicateRuleNode
-        if (toLook == null) { //the predicate (functor) had never been declared
+        Object bigList = sto.get(scope, toFind.name()); //Object[] or PredicateRuleNode
+        if (bigList == null) { //the predicate (functor) had never been declared
             return false;
         }
+        Object[] bigList2 = (Object[]) bigList;
+        boolean posRes = false;
         //we need to make sure that each of the objects in node.right are represented
-        if (!(toLook instanceof PredicateRuleNode)) {
-            Object[] toMatchList = (Object[]) toLook; //list of args that have been declared
-            for (ExpressionNode givenParam : toFind.parameters) {
-                boolean contained = false;
-                Object r1 = get(givenParam);
-                for (Object o : toMatchList) {
-                    Object r2 = get((SighNode) o);
-                    if (r2.equals(r1))
-                        contained = true;
+        for (Object toLook : bigList2) {
+            if (!(toLook instanceof PredicateRuleNode)) {
+                boolean isClear = true; //for the simple predicate
+                Object[] toMatchList = (Object[]) toLook; //list of args that have been declared
+                for (ExpressionNode givenParam : toFind.parameters) {
+                    boolean contained = false;
+                    Object r1 = get(givenParam);
+                    for (Object o : toMatchList) {
+                        Object r2 = get((SighNode) o);
+                        if (r2.equals(r1))
+                            contained = true;
+                    }
+                    if (!contained) {
+                        isClear = false;
+                        break;
+                    }
                 }
-                if (!contained) {
-                    return false;
-                }
+                if (!isClear)
+                    posRes = false;
+                else posRes = true;
+            } else {
+                posRes =  predicateRuleVal(node, toFind, (PredicateRuleNode) toLook);
             }
-            return true;
-        } else {
-            return predicateRuleVal(node, toFind, (PredicateRuleNode) toLook);
+            if (posRes) {
+                return true;
+            }
         }
+        return false;
     }
     public boolean predicateRuleVal(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode) {
         Scope scope = reactor.get(node.left, "scope");

@@ -127,6 +127,15 @@ public final class InterpreterTests extends TestFixture {
     @Test
     public void testLogicFacts () {
         rule = grammar.root;
+        //check("..dog(1, 3, 4) = dog(a: Int, 3)", false); -> exception
+        check("..dog(1+2) = dog(a: Int); return a", 3L);
+        check("var x: Int = 0; ..dog(2, x) = dog(2, a: Int); return a", 0L);
+        check("var x: Int = 7; ..dog(x) = dog(a: Int); return a", 7L);
+
+        check("var x: Bool = false; x = x; return x;", false);
+        check("var y: Bool = false; var x: Bool = true; x = y; return x;", false);
+        check("var x: Bool = false; ..cat(_x); ..dog(y: Bool) :- cat(_x);", null);
+        //check("var x: Bool = false; ..cat(_x); ..dog(y: Bool) :- cat(_x) && cat(y);", null);
         //check("var x: Bool = false; ..dog(y: Int) :- { return true }; ..x ?= dog(_poodle); return x;", false);
         //check("var a: Int = 1; var x: Bool = false; fun dog (a: Bool): Bool { return a }; ..x ?= dog(a); return x;", false);
         //check("var a: Int = 1; var x: Bool = false; fun xxx (a: Int): Int { return a }; ..dog(y: Bool) :- { return true }; ..x ?= xxx(a); return x;", false);
@@ -135,15 +144,20 @@ public final class InterpreterTests extends TestFixture {
         check(".._a; .._b",null);
         check(".._a; ..dog(_poodle)", null);
         check("..dog(_poodle, _labrador); ..dog(_persian)", null);
+        //check("..dog(y: Bool) :- { return true }", null);
     }
 
     @Test
     public void testBoolQueries () {
         rule = grammar.root;
+
         check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
         check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
+
+
         check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
         check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);//!!!!!!!!!!
+
         check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
         check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
         /*check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);
@@ -248,7 +262,7 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(1)"+
                 "..cat(_atom)"+
                 "..x ?= dog(1, i);" +
-                " return x;", InterpreterException.class); //TODO should be false
+                " return x;", InterpreterException.class); //TODO should be false -> is fine
         checkThrows("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
                 "var x: Bool = true; "+
                 "var i: Int = 1; "+
@@ -273,6 +287,25 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(_atom)"+
                 "..x ?= dog(_atomic, _atom);" +
                 " return x;", InterpreterException.class);
+        check("var y: Int = 2;" +
+                "..dog(breed: Int, size: Atom) :- cat(size, y, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(i, _atom);" +
+                " return x;", false);
+        check("var y: Int = 2;" +
+                "..dog(breed: Int, size: Atom) :- cat(size, y, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..cat(2)" +
+                "..x ?= dog(i, _atom);" +
+                " return x;", true);
 
     }
 

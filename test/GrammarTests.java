@@ -50,7 +50,7 @@ public class GrammarTests extends AutumnTestFixture {
         successExpect("true", new ReferenceNode(null, "true"));
         successExpect("false", new ReferenceNode(null, "false"));
         successExpect("null", new ReferenceNode(null, "null"));
-        successExpect("!false", new UnaryExpressionNode(null, NOT, new ReferenceNode(null, "false")));
+        successExpect("!false", new UnaryExpressionNode(null, UnaryOperator.NOT, new ReferenceNode(null, "false")));
     }
 
     @Test

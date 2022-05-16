@@ -111,6 +111,18 @@ public class SighGrammar extends Grammar
         identifier
         .push($ -> new SimpleTypeNode($.span(), $.$[0]));
 
+    public rule arg = lazy(() ->
+        choice(this.parameter, this.expression))
+        .push($ -> new ArgumentNode($.span(), $.$[0]));
+
+    public rule args =
+        arg.sep(0, COMMA)
+            .as_list(ArgumentNode.class);
+
+    public rule predicateU =
+        seq(identifier, LPAREN, args, RPAREN)
+            .push($ -> new PredicateUNode($.span(), $.$[0], $.$[1]));
+
     public rule predicate = lazy(() ->
         seq(identifier, this.function_args)
             .push($ -> new PredicateNode($.span(), $.$[0], $.$[1])));
@@ -252,6 +264,10 @@ public class SighGrammar extends Grammar
             logic_or_expression)
             .push($ -> new PredicateRuleNode($.span(), $.$[0], $.$[1], $.$[2])));
 
+    public rule unification =
+        seq(DOT_DOT, predicateU, EQUALS, predicateU)
+            .push($ -> new UnificationNode($.span(), $.$[0], $.$[1]));
+
     public rule expression = //faut rien changer ici non?
         //choice(assignment_expression);
         choice(bool_query, assignment_expression);
@@ -274,8 +290,9 @@ public class SighGrammar extends Grammar
         seq(array_type);
 
     public rule logic_declaration = lazy(() -> choice(
-       this.atom_decl,
-       this.predicate_decl,
+        this.atom_decl,
+        this.unification,
+        this.predicate_decl,
         this.predicate_rule
     ));
 
