@@ -11,7 +11,7 @@ public class PredicateUNode extends SighNode
 
     @SuppressWarnings("unchecked")
     public PredicateUNode
-        (Span span, Object name, Object parameters) {
+            (Span span, Object name, Object parameters) {
         super(span);
         this.name = Util.cast(name, String.class);
         this.parameters = Util.cast(parameters, List.class);

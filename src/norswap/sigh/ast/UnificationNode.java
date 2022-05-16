@@ -7,7 +7,7 @@ public class UnificationNode extends StatementNode {
     public final PredicateUNode left, right;
 
     public UnificationNode
-        (Span span, Object left, Object right) {
+            (Span span, Object left, Object right) {
         super(span);
         this.left = Util.cast(left, PredicateUNode.class);
         this.right = Util.cast(right, PredicateUNode.class);

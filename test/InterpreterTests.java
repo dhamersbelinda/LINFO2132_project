@@ -125,6 +125,13 @@ public final class InterpreterTests extends TestFixture {
     }
 
     @Test
+    public void tests () {
+        rule = grammar.root;
+        check("var b: Int = 0; ..dog(3); ?- dog(b)!; return b", 3);
+        check("..dog(3); ?- dog(b: Int)!; return b", 3);
+    }
+
+    @Test
     public void testLogicFacts () {
         rule = grammar.root;
         //check("..dog(1, 3, 4) = dog(a: Int, 3)", false); -> exception
@@ -150,10 +157,14 @@ public final class InterpreterTests extends TestFixture {
     @Test
     public void testBoolQueries () {
         rule = grammar.root;
+
         check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
         check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
+
+
         check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
         check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);//!!!!!!!!!!
+
         check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
         check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
         /*check("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", false);
@@ -258,7 +269,7 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(1)"+
                 "..cat(_atom)"+
                 "..x ?= dog(1, i);" +
-                " return x;", InterpreterException.class); //TODO should be false
+                " return x;", InterpreterException.class); //TODO should be false -> is fine
         checkThrows("..dog(breed: Int, size: Atom) :- cat(size, breed, _atomic);" +
                 "var x: Bool = true; "+
                 "var i: Int = 1; "+
@@ -283,7 +294,151 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(_atom)"+
                 "..x ?= dog(_atomic, _atom);" +
                 " return x;", InterpreterException.class);
+        check("var y: Int = 2;" +
+                "..dog(breed: Int, size: Atom) :- cat(size, y, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..x ?= dog(i, _atom);" +
+                " return x;", false);
+        check("var y: Int = 2;" +
+                "..dog(breed: Int, size: Atom) :- cat(size, y, _atomic);" +
+                "var x: Bool = true; "+
+                "var i: Int = 1; "+
+                "..cat(_atomic)"+
+                "..cat(1)"+
+                "..cat(_atom)"+
+                "..cat(2)" +
+                "..x ?= dog(i, _atom);" +
+                " return x;", true);
 
+    }
+
+    @Test
+    public void predicateRuleCombiTests () {
+        rule = grammar.root;
+        //rule in rule
+
+        check("..dog(breed : Int) :- cat(breed);" +
+                "..cat(tail : Int) :- mouse(tail)" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..mouse(i)" +
+                "..x ?= dog(1);" +
+                "return x", true);
+        check("..dog(breed : Int) :- cat(breed);" +
+                "..cat(tail : Int) :- mouse(tail)" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..mouse(i)" +
+                "..x ?= dog(2);" +
+                "return x", false);
+        checkThrows("..dog(breed : Int) :- cat(breed);" +
+                "..cat(tail : Float) :- mouse(tail)" +
+                "var x: Bool = false; "+
+                "var i: String = \"hey\"; " +
+                "..mouse(i)" +
+                "..x ?= dog(2);" +
+                "return x", InterpreterException.class);
+
+        //combirules
+        check("..dog(breed : Int) :- cat(breed) && mouse(_atomic);" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(i);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(1);" +
+                "return x", true);
+
+        check("..dog(breed : Int) :- cat(breed) && mouse(_atomic);" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(i);" +
+                "..x ?= dog(1);" +
+                "return x", false);
+
+        check("..dog(breed : Int) :- cat(breed) && mouse(_atomic);" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(i);" +
+                "..mouse(_atom);" +
+                "..x ?= dog(1);" +
+                "return x", false);
+        check("..dog(breed : Int) :- cat(breed) && mouse(_atomic);" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i);" +
+                "return x", true);
+
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i);" +
+                "return x", true);
+        check("..dog(breed : Int) :- horse(breed) && (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i);" +
+                "return x", false);
+        check("..dog(breed : Int) :- horse(breed) && (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(\"hey\");" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i);" +
+                "return x", false);
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(2);" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i);" +
+                "return x", true);
+
+        //querycombi
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(2);" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i) && dog(2);" +
+                "return x", true);
+
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(2);" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(i) && dog(2);" +
+                "return x", true);
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(1);" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= !(dog(i) && dog(2));" +
+                "return x", true);
+        check("..dog(breed : Int) :- horse(breed) || (cat(breed) && mouse(_atomic));" +
+                "var x: Bool = false; "+
+                "var i: Int = 1; " +
+                "..horse(1);" +
+                "..cat(1);" +
+                "..mouse(_atomic);" +
+                "..x ?= dog(2) || dog(i);" +
+                "return x", true);
     }
 
     // ---------------------------------------------------------------------------------------------

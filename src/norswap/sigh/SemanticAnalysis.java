@@ -126,14 +126,19 @@ public final class SemanticAnalysis
         walker.register(BinaryExpressionNode.class,     PRE_VISIT,  analysis::binaryExpression);
         walker.register(AssignmentNode.class,           PRE_VISIT,  analysis::assignment);
 
+        //walker.register(LogicNode.class,                PRE_VISIT,  analysis::logicExpr);
         walker.register(AtomDeclarationNode.class,      PRE_VISIT,  analysis::atomDecl);
         walker.register(PredicateNode.class,            PRE_VISIT,  analysis::predicate);
         walker.register(PredicateDeclarationNode.class, PRE_VISIT,  analysis::predicateDecl);
         walker.register(PredicateRuleNode.class,        PRE_VISIT,  analysis::predicateRule);
+        walker.register(LogicParenthesizedNode.class,   PRE_VISIT,  analysis::logicParenthesized);
+        walker.register(LogicUnaryExpressionNode.class, PRE_VISIT,  analysis::logicUnaryExpression);
+        walker.register(LogicBinaryExpressionNode.class,PRE_VISIT,  analysis::logicBinaryExpression);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
         walker.register(UnificationNode.class,          PRE_VISIT,  analysis::unification);
-        walker.register(PredicateUNode.class,            PRE_VISIT,  analysis::predicateU);
-        walker.register(ArgumentNode.class,            PRE_VISIT,  analysis::argument);
+        walker.register(PredicateUNode.class,           PRE_VISIT,  analysis::predicateU);
+        walker.register(ArgumentNode.class,             PRE_VISIT,  analysis::argument);
+        walker.register(SolverNode.class,                PRE_VISIT,  analysis::solver);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -346,6 +351,13 @@ public final class SemanticAnalysis
         R.rule(node, "type")
         .using(node.expression, "type")
         .by(Rule::copyFirst);
+    }
+
+    private void logicParenthesized (LogicParenthesizedNode node)
+    {
+        R.rule(node, "type")
+                .using(node.expression, "type")
+                .by(Rule::copyFirst);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -572,6 +584,29 @@ public final class SemanticAnalysis
             });
     }
 
+    private void solver (SolverNode node) {
+        this.inferenceContext = node;
+
+        Attribute[] dependencies = new Attribute[node.list.size()];
+        forEachIndexed(node.list, (i, param) ->
+            dependencies[i] = param.attr("type"));
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+
+                Type[] paramTypes = new Type[node.list.size()];
+                for (int i = 0; i < paramTypes.length; ++i) {
+                    paramTypes[i] = r.get(i);
+                    if (!(r.get(i) instanceof PredicateType))
+                        r.errorFor("Attempting to perform query on non-predicate type: " + r.get(i),
+                            node.list.get(i));
+                }
+                r.set(0, new FunType(r.get(0), paramTypes));
+                //r.set(0, NullType.INSTANCE);
+            });
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private void unaryExpression (UnaryExpressionNode node)
@@ -580,12 +615,26 @@ public final class SemanticAnalysis
         R.set(node, "type", BoolType.INSTANCE);
 
         R.rule()
-        .using(node.operand, "type")
-        .by(r -> {
-            Type opType = r.get(0);
-            if (!(opType instanceof BoolType))
-                r.error("Trying to negate type: " + opType, node);
-        });
+                .using(node.operand, "type")
+                .by(r -> {
+                    Type opType = r.get(0);
+                    if (!(opType instanceof BoolType))
+                        r.error("Trying to negate type: " + opType, node);
+                });
+    }
+
+    private void logicUnaryExpression (LogicUnaryExpressionNode node)
+    {
+        assert node.operator == UnaryOperator.NOT; // only one for now
+        R.set(node, "type", BoolType.INSTANCE);
+
+        R.rule()
+                .using(node.operand, "type")
+                .by(r -> {
+                    Type opType = r.get(0);
+                    if (!(opType instanceof BoolType) && !(opType instanceof PredicateType) && !(opType instanceof AtomType))
+                        r.error("Trying to negate type: " + opType, node);
+                });
     }
 
     // endregion
@@ -612,6 +661,27 @@ public final class SemanticAnalysis
             else if (isEquality(node.operator))
                 binaryEquality(r, node, left, right);
         });
+    }
+
+    private void logicBinaryExpression (LogicBinaryExpressionNode node)
+    {
+        R.rule(node, "type")
+                .using(node.left.attr("type"), node.right.attr("type"))
+                .by(r -> {
+                    Type left  = r.get(0);
+                    Type right = r.get(1);
+
+                    if (isLogic(node.operator)) {
+                        r.set(0, BoolType.INSTANCE);
+
+                        if (!(left instanceof BoolType) && !(left instanceof PredicateType) && !(left instanceof AtomType))
+                            r.errorFor("Attempting to perform binary logic on non-boolean type: " + left,
+                                    node.left);
+                        if (!(right instanceof BoolType) && !(right instanceof PredicateType) && !(right instanceof AtomType))
+                            r.errorFor("Attempting to perform binary logic on non-boolean type: " + right,
+                                    node.right);
+                    }
+                });
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -689,10 +759,10 @@ public final class SemanticAnalysis
     {
         r.set(0, BoolType.INSTANCE);
 
-        if (!(left instanceof BoolType || left instanceof FunType))
+        if (!(left instanceof BoolType))
             r.errorFor("Attempting to perform binary logic on non-boolean type: " + left,
                 node.left);
-        if (!(right instanceof BoolType || left instanceof FunType))
+        if (!(right instanceof BoolType))
             r.errorFor("Attempting to perform binary logic on non-boolean type: " + right,
                 node.right);
     }
@@ -722,8 +792,8 @@ public final class SemanticAnalysis
 
     private void boolquery (BoolQueryNode node)
     { //assignment
-        scope = new Scope(node, scope);
-        R.set(node, "scope", scope);
+        scope = new Scope(node, scope); //!!!!
+        R.set(node, "scope", scope); //!!!!
 
         R.rule(node, "type")
             .using(node.left.attr("type"), node.right.attr("type"))
@@ -739,8 +809,9 @@ public final class SemanticAnalysis
                 if (node.left instanceof ReferenceNode
                     ||  node.left instanceof FieldAccessNode
                     ||  node.left instanceof ArrayAccessNode) {
-                    if (!((node.right instanceof PredicateNode) //TODO change to more general expressions
-                        || (node.right instanceof AtomLiteralNode))) //same))) //TODO dunno if this is right
+                    if (!((right.equals(BoolType.INSTANCE)) //TODO change to more general expressions
+                        || (right.equals(PredicateType.INSTANCE))
+                        || (right.equals(AtomType.INSTANCE)))) //same))) //TODO dunno if this is right
                         r.errorFor("Trying to assign a non-compatible rvalue to a boolean lvalue.", node);
                 }
                 else
