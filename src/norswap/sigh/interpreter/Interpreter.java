@@ -81,6 +81,7 @@ public final class Interpreter
         visitor.register(PredicateRuleNode.class,         this::predRule);
         visitor.register(BoolQueryNode.class,             this::query);
         visitor.register(UnificationNode.class,           this::unification);
+        visitor.register(SolverNode.class,                this::solver);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -257,10 +258,6 @@ public final class Interpreter
     }
 
     private Void unification (UnificationNode node) {
-        //todo run arguments 1 by 1 and assign values for each missing value
-        //todo throw error if 2 values not initialised
-        //todo throw error if 2 values incompatible types
-
         if (!node.left.name.equals(node.right.name))
             throw new InputMismatchException("Left expression and right expression don't use the same decleration");
 
@@ -286,6 +283,10 @@ public final class Interpreter
                 storage.get(rootScope, ((ParameterNode) right).name);
             }
         }
+        return null;
+    }
+
+    private Void solver (SolverNode node) {
         return null;
     }
 

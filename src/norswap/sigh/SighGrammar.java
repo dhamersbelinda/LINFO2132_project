@@ -54,6 +54,7 @@ public class SighGrammar extends Grammar
     public rule DOT_DOT         = word("..");
     public rule DOLLAR          = word("$");
     public rule COMMA           = word(",");
+    public rule SOLVER          = word("?-");
 
     public rule _var            = reserved("var");
     public rule _fun            = reserved("fun");
@@ -122,6 +123,10 @@ public class SighGrammar extends Grammar
     public rule predicateU =
         seq(identifier, LPAREN, args, RPAREN)
             .push($ -> new PredicateUNode($.span(), $.$[0], $.$[1]));
+
+    public rule predicateUs =
+        predicateU.sep(0, COMMA)
+        .as_list(PredicateUNode.class);
 
     public rule predicate = lazy(() ->
         seq(identifier, this.function_args)
@@ -268,9 +273,15 @@ public class SighGrammar extends Grammar
         seq(DOT_DOT, predicateU, EQUALS, predicateU)
             .push($ -> new UnificationNode($.span(), $.$[0], $.$[1]));
 
+    public rule solver = seq(
+        SOLVER,
+        predicateUs,
+        BANG
+    ).push($ -> new SolverNode($.span(), $.$[0]));
+
     public rule expression = //faut rien changer ici non?
         //choice(assignment_expression);
-        choice(bool_query, assignment_expression);
+        choice(solver, bool_query, assignment_expression);
 
     public rule expression_stmt =
         expression

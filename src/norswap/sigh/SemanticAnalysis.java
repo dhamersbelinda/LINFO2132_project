@@ -136,8 +136,9 @@ public final class SemanticAnalysis
         walker.register(LogicBinaryExpressionNode.class,PRE_VISIT,  analysis::logicBinaryExpression);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
         walker.register(UnificationNode.class,          PRE_VISIT,  analysis::unification);
-        walker.register(PredicateUNode.class,            PRE_VISIT,  analysis::predicateU);
-        walker.register(ArgumentNode.class,            PRE_VISIT,  analysis::argument);
+        walker.register(PredicateUNode.class,           PRE_VISIT,  analysis::predicateU);
+        walker.register(ArgumentNode.class,             PRE_VISIT,  analysis::argument);
+        walker.register(SolverNode.class,                PRE_VISIT,  analysis::solver);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -580,6 +581,29 @@ public final class SemanticAnalysis
                 if (!(right instanceof PredicateType))
                     r.errorFor("Attempting to perform unification on non-predicate type: " + right,
                         node.right);
+            });
+    }
+
+    private void solver (SolverNode node) {
+        this.inferenceContext = node;
+
+        Attribute[] dependencies = new Attribute[node.list.size()];
+        forEachIndexed(node.list, (i, param) ->
+            dependencies[i] = param.attr("type"));
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+
+                Type[] paramTypes = new Type[node.list.size()];
+                for (int i = 0; i < paramTypes.length; ++i) {
+                    paramTypes[i] = r.get(i);
+                    if (!(r.get(i) instanceof PredicateType))
+                        r.errorFor("Attempting to perform query on non-predicate type: " + r.get(i),
+                            node.list.get(i));
+                }
+                r.set(0, new FunType(r.get(0), paramTypes));
+                //r.set(0, NullType.INSTANCE);
             });
     }
 

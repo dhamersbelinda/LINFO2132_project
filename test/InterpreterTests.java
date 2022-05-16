@@ -125,6 +125,13 @@ public final class InterpreterTests extends TestFixture {
     }
 
     @Test
+    public void tests () {
+        rule = grammar.root;
+        check("var b: Int = 0; ..dog(3); ?- dog(b)!; return b", 3);
+        check("..dog(3); ?- dog(b: Int)!; return b", 3);
+    }
+
+    @Test
     public void testLogicFacts () {
         rule = grammar.root;
         //check("..dog(1, 3, 4) = dog(a: Int, 3)", false); -> exception
