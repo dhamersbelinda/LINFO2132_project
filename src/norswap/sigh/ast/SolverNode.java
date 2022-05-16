@@ -4,7 +4,7 @@ import norswap.autumn.positions.Span;
 import norswap.utils.Util;
 import java.util.List;
 
-public class SolverNode extends StatementNode
+public class SolverNode extends ExpressionNode
 {
     public final List<PredicateUNode> list;
 

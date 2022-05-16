@@ -286,7 +286,7 @@ public class SighGrammar extends Grammar
     public rule expression_stmt =
         expression
         .filter($ -> {
-            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof BoolQueryNode))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
+            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof BoolQueryNode || $.$[0] instanceof SolverNode))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
                 return false;
             $.push(new ExpressionStatementNode($.span(), $.$[0]));
             return true;
