@@ -181,10 +181,11 @@ public final class SemanticAnalysisTests extends UraniumTestFixture
 
         failureInputWith("var x: Int = 1;\n ..x ?= dog(_poodle); x = 2",
             "lvalue needs to be boolean");
-        failureInput("var x: Bool = false;\n ..x ?= 1 + 2; x = true");
+        failureInput("var x: Bool = false;\n ..x ?= 1 + 2; x = true"); //non-boolean and non-logic expression
         successInput("var x: Bool = false;\n ..x ?= dog(_poodle); x = true");
-        successInput("var x: Bool = false;\n ..x ?= true || false; x = false");//, "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
-        successInput("var x: Bool = false;\n ..x ?= true; x = false");//, "Trying to assign a non-compatible rvalue to a boolean lvalue."); //TODO
+        //boolean expressions are permitted in the semantics of boolQueries but are rejected in the interpreter
+        successInput("var x: Bool = false;\n ..x ?= true || false; x = false");
+        successInput("var x: Bool = false;\n ..x ?= true; x = false");
 
         successInput("var x: Bool = false;\n ..x ?= _atomFact; x = false");
         successInput("..dog(_poodle); ..cat(breed: Int) :- dog(breed, 1);");

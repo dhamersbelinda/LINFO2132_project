@@ -74,7 +74,7 @@ public class GrammarTests extends AutumnTestFixture {
             new PredicateDeclarationNode(null,
                 new PredicateNode(null,
                         "dog", asList(atomlit("_poodle"), atomlit("_labrador")))));
-        successExpect("..dog(_poodle, labrador)", //TODO this test should allow this to be parsed, but we need to check that there are no atoms in funcall
+        successExpect("..dog(_poodle, labrador)",
             new PredicateDeclarationNode(null,
                 new PredicateNode(null, "dog", asList(atomlit("_poodle"), new ReferenceNode(null, "labrador"))
             )));
@@ -186,7 +186,7 @@ public class GrammarTests extends AutumnTestFixture {
                                         atomlit("_atomic"))
                         )));
         success("..boolean1 ?= true");
-        //TODO think of more tests
+        failure("..boolean1 ?= _atom || (1+2)");
     }
 
     @Test
@@ -220,7 +220,11 @@ public class GrammarTests extends AutumnTestFixture {
                                 atomlit("_atomic"))
                 ));
         failure("..cat(breed) :- { return true }"); // not right structure
-        failure("..cat(breed: Int) :- true");
+
+        //rules can only have logic expressions (non-boolean)
+        failure("..dog(breed: Int) :- true");
+        failure("..dog(breed: Int) :- _atom || true");
+        success("..dog(breed: Int) :- _atom");
     }
 
     // ---------------------------------------------------------------------------------------------
