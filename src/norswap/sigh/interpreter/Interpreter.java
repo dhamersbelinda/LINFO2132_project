@@ -255,14 +255,14 @@ public final class Interpreter
             Type leftT = reactor.get(left, "type");
             Type rightT = reactor.get(right, "type");
 
+            if (leftT != rightT)
+                throw new InputMismatchException("Arguments don't have the same types");
+
             if (left instanceof ParameterNode && right instanceof ParameterNode)
                 throw new IllegalArgumentException("Arguments can't both be uninitialised variables");
 
-            if (!(left instanceof ParameterNode || right instanceof ParameterNode) && get(right)!=get(left))
+            if (!(left instanceof ParameterNode || right instanceof ParameterNode) && !get(right).equals(get(left)))
                 throw new IllegalArgumentException("Arguments can't have different values");
-
-            if (leftT != rightT)
-                throw new InputMismatchException("Arguments don't have the same types");
 
             if (left instanceof ParameterNode) {
                 assign(rootScope, ((ParameterNode) left).name, get(right), leftT);
