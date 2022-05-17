@@ -9,7 +9,6 @@ import norswap.sigh.ast.SighNode;
 import norswap.sigh.interpreter.Interpreter;
 import norswap.sigh.interpreter.InterpreterException;
 import norswap.sigh.interpreter.Null;
-import norswap.sigh.types.AtomType;
 import norswap.uranium.Reactor;
 import norswap.uranium.SemanticError;
 import norswap.utils.IO;
