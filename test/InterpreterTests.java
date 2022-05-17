@@ -188,6 +188,15 @@ public final class InterpreterTests extends TestFixture {
                 "var x: Bool = true; "+
                 "..x ?= dog(_atomic);" +
                 " return x;", false);
+        check("..dog(breed: Atom) :- _atom;" +
+                "var x: Bool = true; "+
+                "..x ?= dog(_atomic);" +
+                " return x;", false);
+        check("..dog(breed: Atom) :- _atom;" +
+                "var x: Bool = true; "+
+                ".._atom;"+
+                "..x ?= dog(_atomic);" +
+                " return x;", true);
         check("..dog(breed: Atom) :- cat(breed);" +
                 "var x: Bool = true; "+
                 "..x ?= cat(_atomic);" +

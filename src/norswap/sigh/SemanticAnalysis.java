@@ -750,9 +750,9 @@ public final class SemanticAnalysis
     }
 
     private void boolquery (BoolQueryNode node)
-    { //assignment
-        scope = new Scope(node, scope); //!!!!
-        R.set(node, "scope", scope); //!!!!
+    {
+        scope = new Scope(node, scope);
+        R.set(node, "scope", scope);
 
         R.rule(node, "type")
             .using(node.left.attr("type"), node.right.attr("type"))
@@ -767,9 +767,9 @@ public final class SemanticAnalysis
                 if (node.left instanceof ReferenceNode
                     ||  node.left instanceof FieldAccessNode
                     ||  node.left instanceof ArrayAccessNode) {
-                    if (!((right.equals(BoolType.INSTANCE)) //TODO change to more general expressions
+                    if (!((right.equals(BoolType.INSTANCE))
                         || (right.equals(PredicateType.INSTANCE))
-                        || (right.equals(AtomType.INSTANCE)))) //same))) //TODO dunno if this is right
+                        || (right.equals(AtomType.INSTANCE))))
                         r.errorFor("Trying to assign a non-compatible rvalue to a boolean lvalue.", node);
                 }
                 else
@@ -777,15 +777,6 @@ public final class SemanticAnalysis
             });
     }
 
-    /*private void logicExpr (LogicNode node)
-    {
-        R.rule(node, "type")
-            .using(node.aNode.attr("type")) //gives the specific type and not just ExpressionNode
-            .by(r -> {
-                Type aNode  = r.get(0);
-                r.set(0, r.get(0));
-            });
-    }*/
 
     // endregion
     // =============================================================================================

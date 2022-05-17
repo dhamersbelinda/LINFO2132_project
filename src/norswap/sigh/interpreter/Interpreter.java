@@ -501,7 +501,7 @@ public final class Interpreter
 
         boolean check1 = false;
         boolean check2 = false;
-        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+
         if (expression1 instanceof AtomLiteralNode)
             check1 =  retrieve(node, (AtomLiteralNode) expression1);
         else if (expression1 instanceof LogicParenthesizedNode)
@@ -540,7 +540,7 @@ public final class Interpreter
 
         boolean check1 = false;
         boolean check2 = false;
-        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+
         if (expression1 instanceof AtomLiteralNode)
             check1 =  retrieve(node, (AtomLiteralNode) expression1);
         else if (expression1 instanceof LogicParenthesizedNode)

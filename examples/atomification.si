@@ -1,3 +1,4 @@
+.._sigh
 ..courses(_LANGL1371)
 ..courses(_LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755)
 ..courses(_LEPL1109, _LEPL1110, _LEPL1509, _LEPL1804)
@@ -5,14 +6,14 @@
 
 ..electricity(_LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755)
 ..ict(_LINFO1121, _LINFO1123, _LINFO1252, _LINFO1341)
-..general(course: Atom) :- courses(course) && !(electricity(course) || ict(electricity))
+..general(course: Atom) :- courses(course) && !(electricity(course) || ict(course))
 
 ..TwoThreeECTS(_LEPL1804, _LANGL1371)
 ..fiveECTS(course: Atom) :- courses(course) && !TwoThreeECTS(course)
 
 ..grandDis(_LINFO1121, _LANGL1371)
 ..dis(_LEPL1109, _LEPL1804, _LINFO1341)
-..satisfaction(course: Atom) :- courses(course) && !(grandDis(course) || dis(electricity))
+..satisfaction(course: Atom) :- courses(course) && !(grandDis(course) || dis(course))
 
 ..unification(x: Bool, 0) = unification(false, i: Int)
 var list: Atom[] = [_LANGL1371, _LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755, _LEPL1109, _LEPL1110, _LEPL1509, _LEPL1804, _LINFO1121, _LINFO1123, _LINFO1252, _LINFO1341]
