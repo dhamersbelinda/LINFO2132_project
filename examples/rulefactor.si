@@ -6,8 +6,7 @@ var i: Int = 0
 
 ..OutOfBounds(attempt: Int) :- !prime(attempt) && !notPrime(attempt)
 
-..unification(_a, i) = unification(_a, j: Int)
-var x: Bool = false
+..unification(x: Bool, i) = unification(false, j: Int)
 
 while i < 21 {
     ..x ?= prime(i)
