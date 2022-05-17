@@ -9,6 +9,7 @@ import norswap.sigh.ast.SighNode;
 import norswap.sigh.interpreter.Interpreter;
 import norswap.sigh.interpreter.InterpreterException;
 import norswap.sigh.interpreter.Null;
+import norswap.sigh.types.AtomType;
 import norswap.uranium.Reactor;
 import norswap.uranium.SemanticError;
 import norswap.utils.IO;
@@ -128,12 +129,22 @@ public final class InterpreterTests extends TestFixture {
     public void testLogicFacts () {
         rule = grammar.root;
         //unification
+        checkThrows("..dog(1) = cat(1)", InterpreterException.class);
+        checkThrows("..dog(1) = dog(1, 3)", InterpreterException.class);
+        checkThrows("..dog(1, 3) = dog(a: Int)", InterpreterException.class);
+        checkThrows("..dog(1, a: Int) = dog(1, b: Int)", InterpreterException.class);
+        checkThrows("..dog(1) = dog(2)", InterpreterException.class);
+        checkThrows("..dog(1, a: Atom) = dog(b: Int, 3)", InterpreterException.class);
 
-        //check("..dog(1, 3, 4) = dog(a: Int, 3)", false); -> exception
+        check("..dog(1) = dog(1)", null);
+        check("..dog(1) = dog(a: Int); return a", 1L);
         check("..dog(1+2) = dog(a: Int); return a", 3L);
-        check("var x: Int = 0; ..dog(2, x) = dog(2, a: Int); return a", 0L);
-        check("var x: Int = 7; ..dog(x) = dog(a: Int); return a", 7L);
+        check("..dog(a: Int) = dog(1+2); return a", 3L);
+        check("..dog(1, a: Atom) = dog(1, _a); return a", "_a");
+        check("..dog(1, a: Int) = dog(b: Int, 5); return a + b", 6L);
+        check("var x: Atom = _atom; ..dog(2, x) = dog(2, a: Atom); return a", "_atom");
 
+        //aliasing already exists
         check("var x: Bool = false; x = x; return x;", false);
         check("var y: Bool = false; var x: Bool = true; x = y; return x;", false);
 
