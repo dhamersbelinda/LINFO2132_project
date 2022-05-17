@@ -1,0 +1,34 @@
+var list: Int[] = [1,2,3,5,7,11,13,17,19]
+var i: Int = 0
+..unification(_a, i) = unification(_a, j: Int)
+
+while i < list.length {
+    while j < list[i] {
+        //print(""+j+" not prime")
+        ..notPrime(j)
+        j = j + 1
+    }
+    //print(""+list[i]+" prime")
+    ..prime(list[i])
+    i = i + 1
+    j = j + 1
+}
+
+..OutOfBounds(attempt: Int) :- !prime(attempt) && !notPrime(attempt)
+
+i = 0
+var x: Bool = false
+
+while i < 21 {
+    ..x ?= prime(i)
+    if (x)
+        print(i+" is a prime")
+    ..x ?= notPrime(i)
+    if (x)
+        print(i+" is NOT a prime")
+    ..x ?= OutOfBounds(i)
+    if (x)
+        print(i+" is out of bounds")
+    i = i + 1
+}
+
