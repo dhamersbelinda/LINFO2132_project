@@ -136,8 +136,9 @@ public final class SemanticAnalysis
         walker.register(LogicBinaryExpressionNode.class,PRE_VISIT,  analysis::logicBinaryExpression);
         walker.register(BoolQueryNode.class,            PRE_VISIT,  analysis::boolquery);
         walker.register(UnificationNode.class,          PRE_VISIT,  analysis::unification);
-        walker.register(PredicateUNode.class,            PRE_VISIT,  analysis::predicateU);
-        walker.register(ArgumentNode.class,            PRE_VISIT,  analysis::argument);
+        walker.register(PredicateUNode.class,           PRE_VISIT,  analysis::predicateU);
+        walker.register(ArgumentNode.class,             PRE_VISIT,  analysis::argument);
+        walker.register(SolverNode.class,               PRE_VISIT,  analysis::solver);
 
         // types
         walker.register(SimpleTypeNode.class,           PRE_VISIT,  analysis::simpleType);
@@ -566,6 +567,29 @@ public final class SemanticAnalysis
             });
     }
 
+    private void solver (SolverNode node) {
+        this.inferenceContext = node;
+
+        Attribute[] dependencies = new Attribute[node.list.size()];
+        forEachIndexed(node.list, (i, param) ->
+            dependencies[i] = param.attr("type"));
+
+        R.rule(node, "type")
+            .using(dependencies)
+            .by(r -> {
+
+                Type[] paramTypes = new Type[node.list.size()];
+                for (int i = 0; i < paramTypes.length; ++i) {
+                    paramTypes[i] = r.get(i);
+                    if (!(r.get(i) instanceof PredicateType))
+                        r.errorFor("Attempting to perform query on non-predicate type: " + r.get(i),
+                            node.list.get(i));
+                }
+                r.set(0, new FunType(r.get(0), paramTypes));
+                //r.set(0, NullType.INSTANCE);
+            });
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private void unaryExpression (UnaryExpressionNode node)
@@ -750,9 +774,9 @@ public final class SemanticAnalysis
     }
 
     private void boolquery (BoolQueryNode node)
-    { //assignment
-        scope = new Scope(node, scope); //!!!!
-        R.set(node, "scope", scope); //!!!!
+    {
+        scope = new Scope(node, scope);
+        R.set(node, "scope", scope);
 
         R.rule(node, "type")
             .using(node.left.attr("type"), node.right.attr("type"))
@@ -767,9 +791,9 @@ public final class SemanticAnalysis
                 if (node.left instanceof ReferenceNode
                     ||  node.left instanceof FieldAccessNode
                     ||  node.left instanceof ArrayAccessNode) {
-                    if (!((right.equals(BoolType.INSTANCE)) //TODO change to more general expressions
+                    if (!((right.equals(BoolType.INSTANCE))
                         || (right.equals(PredicateType.INSTANCE))
-                        || (right.equals(AtomType.INSTANCE)))) //same))) //TODO dunno if this is right
+                        || (right.equals(AtomType.INSTANCE))))
                         r.errorFor("Trying to assign a non-compatible rvalue to a boolean lvalue.", node);
                 }
                 else
@@ -777,15 +801,6 @@ public final class SemanticAnalysis
             });
     }
 
-    /*private void logicExpr (LogicNode node)
-    {
-        R.rule(node, "type")
-            .using(node.aNode.attr("type")) //gives the specific type and not just ExpressionNode
-            .by(r -> {
-                Type aNode  = r.get(0);
-                r.set(0, r.get(0));
-            });
-    }*/
 
     // endregion
     // =============================================================================================

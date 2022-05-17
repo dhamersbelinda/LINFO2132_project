@@ -81,6 +81,7 @@ public final class Interpreter
         visitor.register(PredicateRuleNode.class,         this::predRule);
         visitor.register(BoolQueryNode.class,             this::boolQuery);
         visitor.register(UnificationNode.class,           this::unification);
+        visitor.register(SolverNode.class,                this::solver);
 
         // statement groups & declarations
         visitor.register(RootNode.class,                 this::root);
@@ -270,6 +271,10 @@ public final class Interpreter
                 assign(rootScope, ((ParameterNode) right).name, get(left), rightT);
             }
         }
+        return null;
+    }
+
+    private Void solver (SolverNode node) {
         return null;
     }
 
@@ -501,7 +506,7 @@ public final class Interpreter
 
         boolean check1 = false;
         boolean check2 = false;
-        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+
         if (expression1 instanceof AtomLiteralNode)
             check1 =  retrieve(node, (AtomLiteralNode) expression1);
         else if (expression1 instanceof LogicParenthesizedNode)
@@ -540,7 +545,7 @@ public final class Interpreter
 
         boolean check1 = false;
         boolean check2 = false;
-        //TODO make checks if types are correct -> maybe in semantics it's sufficient
+
         if (expression1 instanceof AtomLiteralNode)
             check1 =  retrieve(node, (AtomLiteralNode) expression1);
         else if (expression1 instanceof LogicParenthesizedNode)

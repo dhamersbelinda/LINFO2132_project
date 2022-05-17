@@ -54,6 +54,7 @@ public class SighGrammar extends Grammar
     public rule DOT_DOT         = word("..");
     public rule DOLLAR          = word("$");
     public rule COMMA           = word(",");
+    public rule SOLVER          = word("?-");
 
     public rule _var            = reserved("var");
     public rule _fun            = reserved("fun");
@@ -123,6 +124,10 @@ public class SighGrammar extends Grammar
         seq(identifier, LPAREN, args, RPAREN)
             .push($ -> new PredicateUNode($.span(), $.$[0], $.$[1]));
 
+    public rule predicateUs =
+        predicateU.sep(0, COMMA)
+        .as_list(PredicateUNode.class);
+
     public rule predicate = lazy(() ->
         seq(identifier, this.function_args)
             .push($ -> new PredicateNode($.span(), $.$[0], $.$[1])));
@@ -149,7 +154,7 @@ public class SighGrammar extends Grammar
         floating,
         integer,
         string,
-        atom_identifier,//todo added for predicate facts
+        atom_identifier,
         //predicate,
         paren_expression,
         array);
@@ -180,7 +185,7 @@ public class SighGrammar extends Grammar
     public rule logic_prefix_expression = right_expression()
             .operand(logic_basic_expression)
             .prefix(BANG.as_val(NOT),
-                    $ -> new LogicUnaryExpressionNode($.span(), $.$[0], $.$[1])); //TODO change node
+                    $ -> new LogicUnaryExpressionNode($.span(), $.$[0], $.$[1]));
 
     public rule mult_op = choice(
         STAR        .as_val(BinaryOperator.MULTIPLY),
@@ -222,7 +227,7 @@ public class SighGrammar extends Grammar
     public rule logic_and_expression = left_expression()
             .operand(logic_prefix_expression)
             .infix(AMP_AMP.as_val(BinaryOperator.AND),
-                    $ -> new LogicBinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2])); //TODO change node
+                    $ -> new LogicBinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
 
     public rule or_expression = left_expression()
         .operand(and_expression)
@@ -232,7 +237,7 @@ public class SighGrammar extends Grammar
     public rule logic_or_expression = left_expression()
             .operand(logic_and_expression)
             .infix(BAR_BAR.as_val(BinaryOperator.OR),
-                    $ -> new LogicBinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2])); //TODO change node
+                    $ -> new LogicBinaryExpressionNode($.span(), $.$[0], $.$[1], $.$[2]));
 
     public rule assignment_expression = right_expression()
         .operand(or_expression)
@@ -268,14 +273,19 @@ public class SighGrammar extends Grammar
         seq(DOT_DOT, predicateU, EQUALS, predicateU)
             .push($ -> new UnificationNode($.span(), $.$[0], $.$[1]));
 
-    public rule expression = //faut rien changer ici non?
-        //choice(assignment_expression);
-        choice(bool_query, assignment_expression);
+    public rule solver = seq(
+        SOLVER,
+        predicateUs,
+        BANG
+    ).push($ -> new SolverNode($.span(), $.$[0]));
+
+    public rule expression =
+        choice(solver, bool_query, assignment_expression);
 
     public rule expression_stmt =
         expression
         .filter($ -> {
-            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof BoolQueryNode))//|| $.$[0] instanceof AtomDeclarationNode || $.$[0] instanceof PredicateDeclarationNode))
+            if (!($.$[0] instanceof AssignmentNode || $.$[0] instanceof FunCallNode || $.$[0] instanceof BoolQueryNode || $.$[0] instanceof SolverNode))
                 return false;
             $.push(new ExpressionStatementNode($.span(), $.$[0]));
             return true;
