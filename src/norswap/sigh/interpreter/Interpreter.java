@@ -257,10 +257,6 @@ public final class Interpreter
     }
 
     private Void unification (UnificationNode node) {
-        //todo run arguments 1 by 1 and assign values for each missing value
-        //todo throw error if 2 values not initialised
-        //todo throw error if 2 values incompatible types
-
         if (!node.left.name.equals(node.right.name))
             throw new InputMismatchException("Left expression and right expression don't use the same decleration");
 
@@ -274,7 +270,10 @@ public final class Interpreter
             Type rightT = reactor.get(right, "type");
 
             if (left instanceof ParameterNode && right instanceof ParameterNode)
-                throw new IllegalArgumentException("Arguments can't both be ParameterNode");
+                throw new IllegalArgumentException("Arguments can't both be uninitialised variables");
+
+            if (!(left instanceof ParameterNode || right instanceof ParameterNode) && get(right)!=get(left))
+                throw new IllegalArgumentException("Arguments can't have different values");
 
             if (leftT != rightT)
                 throw new InputMismatchException("Arguments don't have the same types");
@@ -283,7 +282,6 @@ public final class Interpreter
                 assign(rootScope, ((ParameterNode) left).name, get(right), leftT);
             } else if (right instanceof ParameterNode) {
                 assign(rootScope, ((ParameterNode) right).name, get(left), rightT);
-                storage.get(rootScope, ((ParameterNode) right).name);
             }
         }
         return null;
