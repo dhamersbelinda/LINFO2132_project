@@ -1,0 +1,34 @@
+..courses(_LANGL1371)
+..courses(_LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755)
+..courses(_LEPL1109, _LEPL1110, _LEPL1509, _LEPL1804)
+..courses(_LINFO1121, _LINFO1123, _LINFO1252, _LINFO1341)
+
+..electricity(_LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755)
+..ict(_LINFO1121, _LINFO1123, _LINFO1252, _LINFO1341)
+..general(course: Atom) :- courses(course) && !(electricity(course) || ict(electricity))
+
+..TwoThreeECTS(_LEPL1804, _LANGL1371)
+..fiveECTS(course: Atom) :- courses(course) && !TwoThreeECTS(course)
+
+..grandDis(_LINFO1121, _LANGL1371)
+..dis(_LEPL1109, _LEPL1804, _LINFO1341)
+..satisfaction(course: Atom) :- courses(course) && !(grandDis(course) || dis(electricity))
+
+..unification(x: Bool, 0) = unification(false, i: Int)
+var list: Atom[] = [_LANGL1371, _LELEC1310, _LELEC1360, _LELEC1530, _LELEC1755, _LEPL1109, _LEPL1110, _LEPL1509, _LEPL1804, _LINFO1121, _LINFO1123, _LINFO1252, _LINFO1341]
+
+while i < list.length {
+    ..x ?= general(list[i]) && satisfaction(list[i])
+    if (x)
+        print("tough luck you have "+list[i]+" as mandatory course")
+
+    ..x ?= ict(list[i]) || grandDis(list[i])
+    if (x)
+        print(list[i]+" seems like a good course")
+
+    ..x ?= fiveECTS(list[i]) && grandDis(list[i])
+    if (x)
+        print(list[i]+" gives ou free credits")
+
+    i = i + 1
+}

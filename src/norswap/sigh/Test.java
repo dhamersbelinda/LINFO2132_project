@@ -18,7 +18,7 @@ public final class Test
 {
     public static void main (String[] args) {
 //         String file = "fizzbuzz.si";
-        String file = "rulefactor.si";//"kitchensink.si";
+        String file = "atomification.si";//"rulefactor.si";//"kitchensink.si";
         String path = Paths.get("examples/", file).toAbsolutePath().toString();
         String src = IO.slurp(path);
         SighGrammar grammar = new SighGrammar();
