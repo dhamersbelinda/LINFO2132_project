@@ -432,9 +432,10 @@ public final class SemanticAnalysis
 
     private void predicateDecl (PredicateDeclarationNode node) {
         final Scope scope_ref = this.scope;
+        //checking if the declaration already has a context
         DeclarationContext maybeCtx = scope_ref.lookup(node.predicate.name());
-        System.out.println(node.contents());
 
+        //if context exists, set "decl", "scope" and "type" attributes accordingly
         if (maybeCtx != null) {
             R.set(node, "decl", maybeCtx.declaration);
             R.set(node, "scope", maybeCtx.scope);
@@ -445,15 +446,18 @@ public final class SemanticAnalysis
             return;
         }
 
+        //the context doesn't exist
+
+        //declare the predicate node in the scope and set the declaration's "scope" attribute
         scope.declare(node.predicate.name(), node);
         R.set(node, "scope", scope);
-        //R.set(node, "type", PredicateType.INSTANCE);
 
         Attribute[] dependencies = new Attribute[node.predicate.parameters.size()];
         forEachIndexed(node.predicate.parameters, (i, param) ->
             dependencies[i] = param.attr("type"));
 
-        R.rule(node, "type") //TODO don't know if this is relevant
+        //set the type of the predicate using the types of its parameters
+        R.rule(node, "type")
             .using(dependencies)
             .by(r -> {
                 Type[] paramTypes = new Type[node.predicate.parameters.size()];
@@ -461,15 +465,15 @@ public final class SemanticAnalysis
                     paramTypes[i] = r.get(i);
                 r.set(0, new FunType(r.get(0), paramTypes));
             });
-        //TODO are all checks done ?
     }
 
     private void predicateRule (PredicateRuleNode node)
     {
         final Scope scope_ref = this.scope;
+        //checking if the declaration already has a context
         DeclarationContext maybeCtx = scope_ref.lookup(node.name());
-        //System.out.println(node.contents());
 
+        //if context exists, set "decl", "scope" and "type" attributes accordingly
         if (maybeCtx != null) {
             R.set(node, "decl",  maybeCtx.declaration);
             R.set(node, "scope", maybeCtx.scope);
@@ -480,37 +484,14 @@ public final class SemanticAnalysis
             return;
         }
 
+        //the context doesn't exist
+
+        //declare the node in the scope and set its "scope" attribute
         scope.declare(node.name(), node);
-        //scope = new Scope(node, scope);
         R.set(node, "scope", scope);
 
-
-        /*Attribute[] dependencies = new Attribute[node.parameters.size()];
-        forEachIndexed(node.parameters, (i, param) ->
-            dependencies[i] = param.attr("type"));*/
-
+        //setting the type of the rule node
         R.set(node, "type", node.getClass());
-
-        //n'a pas l'air d'être utile pcq paramTypes n'est utilisé nulle part et
-        //l'attribut 0 de la rule est déjà set avant
-        /*R.rule(node, "type")
-            .using(dependencies)
-            .by (r -> {
-                Type[] paramTypes = new Type[node.parameters.size()];
-                for (int i = 0; i < paramTypes.length; ++i)
-                    paramTypes[i] = r.get(i);
-                r.set(0, new FunType(BoolType.INSTANCE, paramTypes));
-            });*/
-
-        //une predicate rule ne retourne rien à priori
-        /*R.rule()
-            .using(node.predicate.attr("returns"))
-            .by(r -> {
-                boolean returns = r.get(0);
-                if (!returns)
-                    r.error("Missing return in function.", node);
-                // NOTE: The returned value presence & type is checked in returnStmt().
-            });*/
 
     }
     // ---------------------------------------------------------------------------------------------
@@ -564,6 +545,7 @@ public final class SemanticAnalysis
     private void unification (UnificationNode node) {
         this.inferenceContext = node;
 
+        //setting the "type" attribute
         R.rule(node, "type")
             .using(node.left.attr("type"), node.right.attr("type"))
             .by(r -> {
@@ -573,6 +555,7 @@ public final class SemanticAnalysis
 
                 r.set(0, NullType.INSTANCE);
 
+                //both sides need to be Predicates
                 if (!(left instanceof PredicateType))
                     r.errorFor("Attempting to perform unification on non-predicate type: " + left,
                         node.left);
@@ -775,7 +758,6 @@ public final class SemanticAnalysis
             .using(node.left.attr("type"), node.right.attr("type"))
             .by(r -> {
                 Type left  = r.get(0);
-                System.out.println(left.getClass());
                 if (!left.equals(BoolType.INSTANCE))
                     r.errorFor("lvalue needs to be boolean", node);
                 Type right = r.get(1);

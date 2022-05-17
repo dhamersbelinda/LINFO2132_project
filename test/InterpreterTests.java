@@ -156,13 +156,13 @@ public final class InterpreterTests extends TestFixture {
         check("var x: Bool = false; .._atomFact; ..x ?= _atomic; return x;", false);
         check("var x: Bool = false; .._atomFact; ..x ?= _atomFact; return x;", true);
 
-
         check("var x: Bool = false; ..dog(_poodle); ..x ?= dog(_poodle); return x;", true);
         check("var x: Bool = false; ..dog(42); ..x ?= dog(42); return x;", true);
 
         check("var x: Bool = true; ..dog(_poodle); ..x ?= dog(_labrador); return x;", false);
         check("var x: Bool = true; ..cat(_poodle); ..x ?= dog(_poodle); return x;", false);
 
+        //"normal" boolean expressions are not allowed in boolQueries
         checkThrows("var x: Bool = true; var y: Bool = false; ..x ?= y; return x;", InterpreterException.class);
         checkThrows("var x: Bool = false; var y: Bool = true; ..x ?= y; return x;", InterpreterException.class);
         checkThrows("var x: Bool = false; var y: Bool = true; ..x ?= y || x; return x;", InterpreterException.class);
@@ -364,14 +364,14 @@ public final class InterpreterTests extends TestFixture {
                 "..cat(7)"+
                 "..x ?= dog(breed);" +
                 " return x;", true);
-        check("var breed: Int = 3;" +
+        checkThrows("var breed: Int = 3;" +
                 "..dog(size: Int) :- cat(size, 3+4);" +
                 "var x: Bool = true; "+
                 "var i: Int = 1; "+
                 "..cat(breed)"+ //3
                 "..cat(3)"+
                 "..x ?= dog(breed);" +
-                " return x;", false);
+                " return x;", InterpreterException.class); //same thing declared twice
 
         //tests with several declarations (rules and facts)
         check("..dog(breed: Int, size: Atom) :- cat(size, breed);" +
