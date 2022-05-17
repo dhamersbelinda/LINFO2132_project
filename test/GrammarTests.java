@@ -112,16 +112,6 @@ public class GrammarTests extends AutumnTestFixture {
                 ))
         ));
         failure("..boolean1 ?= dog(_poodle) + 1");
-        /*successExpect(".boolean1 ?= dog(_poodle) ?= _atomFact",
-            new ExpressionStatementNode(null,
-                new BoolQueryNode(null,
-                    new ReferenceNode(null, "boolean1"),
-                    new ExpressionStatementNode(null,
-                        new BoolQueryNode(null,
-                            new PredicateNode(null,
-                                "dog",
-                                asList(atomlit("_poodle"))),
-                            atomlit("_atomFact"))))));*/
         failure("..boolean1 ?= dog(_poodle) ?= _atomFact");
         successExpect("..boolean1 ?= dog(1)",
             new ExpressionStatementNode(null,
@@ -195,13 +185,6 @@ public class GrammarTests extends AutumnTestFixture {
                                         OR,
                                         atomlit("_atomic"))
                         )));
-        /*
-        successExpect("..boolean1 ?= true",
-                new ExpressionStatementNode(null,
-                        new BoolQueryNode(null,
-                                new ReferenceNode(null, "boolean1"),
-                                new BinaryExpressionNode(null, intlit(1), ADD, intlit(2)))
-                ));*/
         success("..boolean1 ?= true");
         //TODO think of more tests
     }
@@ -237,8 +220,7 @@ public class GrammarTests extends AutumnTestFixture {
                                 atomlit("_atomic"))
                 ));
         failure("..cat(breed) :- { return true }"); // not right structure
-        failure("..cat(breed: Int) :- true"); //TODO not (yet) a predicate
-        //TODO more tests
+        failure("..cat(breed: Int) :- true");
     }
 
     // ---------------------------------------------------------------------------------------------

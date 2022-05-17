@@ -190,12 +190,12 @@ public final class Interpreter
             //check if present
             for (Object o : factList) {
                 if (o.equals(node.predicate.parameters.get(i)))
-                    throw new IllegalArgumentException();
+                    throw new IllegalArgumentException("This argument was already provided for the same predicate.");
             }
             //add
             Object[] newList = new Object[factList.length+1];
             System.arraycopy(factList, 0, newList, 0, factList.length);
-            newList[newList.length-1] = node.predicate.parameters.get(i);
+            newList[newList.length-1] = get(node.predicate.parameters.get(i));
             factList = newList;
         }
 
@@ -317,7 +317,7 @@ public final class Interpreter
             assign(scope, name, result, reactor.get(node, "type"));
             return result;
         }
-        throw new IllegalArgumentException("Illegal content in BoolQuery");
+        throw new IllegalArgumentException("Illegal non-logic content in BoolQuery");
     }
 
     public boolean retrieve(BoolQueryNode node, PredicateNode toFind) {
@@ -339,8 +339,8 @@ public final class Interpreter
                     boolean contained = false;
                     Object r1 = get(givenParam);
                     for (Object o : toMatchList) {
-                        Object r2 = get((SighNode) o);
-                        if (r2.equals(r1))
+                        //Object r2 = get((SighNode) o);
+                        if (o.equals(r1))
                             contained = true;
                     }
                     if (!contained) {
@@ -370,14 +370,16 @@ public final class Interpreter
         List<ParameterNode> params = ruleNode.parameters;
         //size check
         if (given_args.size() != params.size()) {
-            throw new IllegalArgumentException("size not consistent"); //TODO improve message
+            //throw new IllegalArgumentException("size not consistent");
+            return false;
         }
         //type check
         for (int pos = 0; pos < given_args.size(); pos = pos + 1) {
             Type given_arg_type = reactor.get(given_args.get(pos), "type");
             Type param_type = reactor.get(params.get(pos), "type");
             if (!isAssignableTo(param_type, given_arg_type)) {
-                throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
+                //throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, param_type.name()));
+                return false;
             }
         }
 
@@ -434,6 +436,7 @@ public final class Interpreter
                 Type arg_type = reactor.get(arg, "type"); //TODO hope this works
                 if (!isAssignableTo(arg_type, given_arg_type)) {
                     throw new IllegalArgumentException(format("Argument at position %d is should be of type %s", pos, arg_type.name()));
+                    //return false;
                 }
                 args_to_replace.set(i, (ExpressionNode) given_arg);
             }
@@ -461,7 +464,7 @@ public final class Interpreter
             return retrieve(node, (LogicBinaryExpressionNode)expression);
         else if (expression instanceof PredicateNode)
             return retrieve(node, (PredicateNode)expression);
-        throw new IllegalArgumentException("Illegal type in BoolQuery.");
+        throw new IllegalArgumentException("Illegal type in LogicParenthesizedNode.");
     }
 
     public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, LogicParenthesizedNode component) {
@@ -476,7 +479,7 @@ public final class Interpreter
             return replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression);
         else if (expression instanceof PredicateNode)
             return replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression);
-        throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve logicParen");
+        throw new IllegalArgumentException("Illegal type in LogicParenthesizedNode.");
     }
 
     public boolean retrieve(BoolQueryNode node, LogicUnaryExpressionNode toFind) {
@@ -491,7 +494,7 @@ public final class Interpreter
             return ! retrieve(node, (LogicBinaryExpressionNode)expression);
         else if (expression instanceof PredicateNode)
             return ! retrieve(node, (PredicateNode)expression);
-        throw new IllegalArgumentException("Illegal type in BoolQuery.");
+        throw new IllegalArgumentException("Illegal type in LogicUnaryExpressionNode.");
     }
 
     public boolean replaceRetrieve(BoolQueryNode node, PredicateNode queriedPredicate, PredicateRuleNode ruleNode, LogicUnaryExpressionNode component) {
@@ -506,7 +509,7 @@ public final class Interpreter
             return ! replaceRetrieve(node, queriedPredicate, ruleNode, (LogicBinaryExpressionNode) expression);
         else if (expression instanceof PredicateNode)
             return ! replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression);
-        throw new IllegalArgumentException("Illegal type in BoolQuery.replaceRetriev logicUnary");
+        throw new IllegalArgumentException("Illegal type in LogicUnaryExpressionNode");
     }
 
     public boolean retrieve(BoolQueryNode node, LogicBinaryExpressionNode toFind) {
@@ -527,7 +530,7 @@ public final class Interpreter
         else if (expression1 instanceof PredicateNode)
             check1 = retrieve(node, (PredicateNode)expression1);
         else
-            throw new IllegalArgumentException("Illegal type in BoolQuery.");
+            throw new IllegalArgumentException("Illegal type in LogicBinaryExpressionNode.");
 
         if (expression2 instanceof AtomLiteralNode)
             check2 =  retrieve(node, (AtomLiteralNode) expression2);
@@ -540,7 +543,7 @@ public final class Interpreter
         else if (expression2 instanceof PredicateNode)
             check2 = retrieve(node, (PredicateNode)expression2);
         else
-            throw new IllegalArgumentException("Illegal type in BoolQuery.");
+            throw new IllegalArgumentException("Illegal type in LogicBinaryExpressionNode.");
 
         if (toFind.operator == BinaryOperator.AND)
             return check1 && check2;
@@ -566,7 +569,7 @@ public final class Interpreter
         else if (expression1 instanceof PredicateNode)
             check1 = replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression1);
         else
-            throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve expression1 logicbinary");
+            throw new IllegalArgumentException("Illegal type in LogicBinaryExpressionNode");
 
         if (expression2 instanceof AtomLiteralNode)
             check2 =  retrieve(node, (AtomLiteralNode) expression2);
@@ -579,7 +582,7 @@ public final class Interpreter
         else if (expression2 instanceof PredicateNode)
             check2 = replaceRetrieve(node, queriedPredicate, ruleNode, (PredicateNode) expression2);
         else
-            throw new IllegalArgumentException("Illegal type in BoolQuery. replaceRetrieve expression2 logicbinary");
+            throw new IllegalArgumentException("Illegal type in LogicBinaryExpressionNode.");
 
         if (component.operator == BinaryOperator.AND)
             return check1 && check2;
