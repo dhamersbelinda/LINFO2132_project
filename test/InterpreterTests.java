@@ -441,6 +441,14 @@ public final class InterpreterTests extends TestFixture {
                 "..mouse(i)" +
                 "..x ?= dog(2);" +
                 "return x", false);
+        check("..dog(breed : Int) :- cat(breed, 2);"+ //test case in report
+                "var y: Bool = false;"+
+                "..cat(1);"+
+                "..cat(2);"+
+                "..mouse(_atomic);"+
+                "..y ?= dog(1) && mouse(_atomic);" +
+                "return y", true);
+
 
         //combirules
         check("..dog(breed : Int) :- cat(breed) && mouse(_atomic);" +
