@@ -1,22 +1,12 @@
-var list: Int[] = [1,2,3,5,7,11,13,17,19]
 var i: Int = 0
-..unification(_a, i) = unification(_a, j: Int)
 
-while i < list.length {
-    while j < list[i] {
-        //print(""+j+" not prime")
-        ..notPrime(j)
-        j = j + 1
-    }
-    //print(""+list[i]+" prime")
-    ..prime(list[i])
-    i = i + 1
-    j = j + 1
-}
+..prime(1);..prime(2);..prime(3);..prime(5);..prime(7);..prime(11);..prime(13);..prime(17);..prime(19);
+..notPrime(4);..notPrime(6);..notPrime(8);..notPrime(9);..notPrime(10);..notPrime(12);
+..notPrime(14);..notPrime(15);..notPrime(16);..notPrime(18);
 
 ..OutOfBounds(attempt: Int) :- !prime(attempt) && !notPrime(attempt)
 
-i = 0
+..unification(_a, i) = unification(_a, j: Int)
 var x: Bool = false
 
 while i < 21 {
